@@ -1,25 +1,26 @@
 using Avalonia;
 using ReactiveUI;
 
-namespace MultipathSignal.Views;
-
-public partial class PlotView : Avalonia.Controls.UserControl
+namespace MultipathSignal.Views
 {
-	public PlotView()
+	public partial class PlotView : Avalonia.Controls.UserControl
 	{
-		InitializeComponent();
+		public PlotView()
+		{
+			InitializeComponent();
 
-		DataContextChanged += (s, _) => {
-			if (s is not StyledElement @se)
-				throw new System.InvalidOperationException();
+			DataContextChanged += (s, _) => {
+				if (s is not StyledElement @se)
+					throw new System.InvalidOperationException();
 
-			if (@se.DataContext is PlotViewModel @pvm)
-				@pvm.PropertyChanged += OnPropertyChanged;
-		};
-	}
+				if (@se.DataContext is PlotViewModel @pvm)
+					@pvm.PropertyChanged += OnPropertyChanged;
+			};
+		}
 
-	private void OnPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
-	{
-		ThePlot.InvalidatePlot(true);
+		private void OnPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+		{
+			ThePlot.InvalidatePlot(true);
+		}
 	}
 }
