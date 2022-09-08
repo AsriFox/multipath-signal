@@ -1,4 +1,4 @@
-namespace MultipathSignal;
+namespace MultipathSignal.Views;
 
 public partial class MainWindow : Avalonia.Controls.Window
 {
@@ -16,6 +16,6 @@ public partial class MainWindow : Avalonia.Controls.Window
     public MainWindow()
     {
         InitializeComponent();
-		ViewModel.Plots[0].Points.Add(new OxyPlot.DataPoint(1, 0));
+		if (ViewModel is null) throw new System.NullReferenceException();
     }
 }

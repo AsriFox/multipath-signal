@@ -1,6 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:oxy="http://oxyplot.org/avalonia"
-             x:Class="MultipathSignal.PlotView">
-  <oxy:PlotView Model="{Binding Model}" />
+             x:Class="MultipathSignal.Views.PlotView">
+  <oxy:PlotView x:Name="ThePlot" Model="{Binding Model}" />
 </UserControl>

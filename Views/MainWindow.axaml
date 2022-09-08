@@ -1,0 +1,15 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:MultipathSignal.Views"
+        x:Class="MultipathSignal.Views.MainWindow"
+        Title="MultipathSignal">
+  <Grid RowDefinitions="1*,1*,Auto">
+    <local:PlotView DataContext="{Binding Plots[0]}" Grid.Row="0" />
+    <local:PlotView DataContext="{Binding Plots[1]}" Grid.Row="1" />
+    <DockPanel Grid.Row="2">
+      <Button Content="Generate"
+              Command="{Binding GenerateSignal}" 
+              DockPanel.Dock="Right" />
+    </DockPanel>
+  </Grid>
+</Window>

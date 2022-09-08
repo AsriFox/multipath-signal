@@ -1,4 +1,4 @@
-﻿namespace MultipathSignal;
+﻿namespace MultipathSignal.Views;
 
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -7,7 +7,7 @@ using OxyPlot.Axes;
 using OxyPlot.Series;
 using ReactiveUI;
 
-internal class PlotViewModel : ReactiveObject
+public class PlotViewModel : ReactiveObject
 {
 	private string title = "Empty";
 	public string Title {
@@ -32,7 +32,12 @@ internal class PlotViewModel : ReactiveObject
 
 	private void OnPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
 	{
-		if (e.PropertyName != nameof(Points)) return;
+		switch (e.PropertyName) {
+			case nameof(Points):
+				break;
+			default:
+				return;
+		}
 
 		points.CollectionChanged += OnCollectionChanged;
 
@@ -42,6 +47,8 @@ internal class PlotViewModel : ReactiveObject
 		var s = new LineSeries { LineStyle = LineStyle.Solid, Color = OxyColors.Blue };
 		s.Points.AddRange(points);
 		Model.Series.Add(s);
+
+		this.RaisePropertyChanged(nameof(Model));
 	}
 
 	private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
