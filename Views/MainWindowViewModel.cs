@@ -22,32 +22,38 @@ namespace MultipathSignal.Views
 		/// </summary>
 		public static MainWindowViewModel Default => new() {
 			Plots = { 
-				new PlotViewModel { 
-					Title = "Very",
-					Points = new[] { new OxyPlot.DataPoint(0, 0), new OxyPlot.DataPoint(0.5, 1) }
-				},
-				new PlotViewModel {
-					Title = "Interesting",
-					Points = new[] { new OxyPlot.DataPoint(0, 1), new OxyPlot.DataPoint(1, 0) }
-				}
+				new PlotViewModel { Title = "Clean signal" },
+				new PlotViewModel { Title = "Noisy signal" },
 			}
 		};
 
 		public void GenerateSignal()
 		{
-			Core.SignalGenerator.Samplerate = 10000;
+			Core.SignalGenerator.Samplerate = Samplerate;
 			var gen = new Core.SignalModulator {
-				Generator = new Core.SignalGenerator {
-					Frequency = 1000
-				},
-				BitRate = 100
+				MainFrequency = MainFrequency,
+				BitRate = ModulationSpeed,
+				Method = ModulationType,
+				Depth = ModulationDepth
 			};
 			var rand = new Random();
 			var signal = gen.Modulate(
-				Enumerable.Range(0, 64)
+				Enumerable.Range(0, BitSeqLength)
 					.Select(_ => rand.NextDouble() > 0.5));
 
 			Plots[0].Points = signal.Select((v, i) => new OxyPlot.DataPoint(i, v)).ToList();
 		}
+
+		public Core.SignalModulator.Modulation ModulationType { get; set; } = Core.SignalModulator.Modulation.OOK;
+
+		public double ModulationDepth { get; set; } = 0.8;
+
+		public double ModulationSpeed { get; set; } = 100.0;
+
+		public int BitSeqLength { get; set; } = 64;
+
+		public double MainFrequency { get; set; } = 1000.0;
+
+		public double Samplerate { get; set; } = 10000.0;
 	}
 }

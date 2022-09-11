@@ -42,7 +42,7 @@ namespace MultipathSignal.Views
 			points.CollectionChanged += OnCollectionChanged;
 
 			Model = new PlotModel();
-			Model.Axes.Add(new LinearAxis { Position = AxisPosition.Left, Minimum = 0, Maximum = 1 });
+			Model.Axes.Add(new LinearAxis { Position = AxisPosition.Left, Minimum = -2, Maximum = 2 });
 
 			var s = new LineSeries { LineStyle = LineStyle.Solid, Color = OxyColors.Blue };
 			s.Points.AddRange(points);

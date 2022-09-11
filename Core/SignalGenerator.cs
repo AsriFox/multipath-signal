@@ -45,7 +45,7 @@ namespace MultipathSignal.Core
 			/// <br/>
 			/// "Frequency Telegraph"
 			/// </summary>
-			BFSK,
+			FT,
 		}
 
 		public Modulation Method { get; set; } = Modulation.OOK;
@@ -65,6 +65,7 @@ namespace MultipathSignal.Core
 
 		public IList<double> Modulate(IEnumerable<bool> modul)
 		{
+			Generator.Frequency = MainFrequency;
 			var signal = new List<double>();
 			foreach (var q in modul) {
 				double v = 1.0;
@@ -75,7 +76,7 @@ namespace MultipathSignal.Core
 					case Modulation.BPSK:	// NRZI
 						if (q) Generator.Phase += Math.PI;
 						break;
-					case Modulation.BFSK:
+					case Modulation.FT:
 						Generator.Frequency = MainFrequency * (q ? 1.0 + Depth : 1.0 - Depth);
 						break;
 					default:

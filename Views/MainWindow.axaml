@@ -2,14 +2,82 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:MultipathSignal.Views"
         x:Class="MultipathSignal.Views.MainWindow"
-        Title="MultipathSignal">
-  <Grid RowDefinitions="1*,1*,Auto">
+        Title="MultipathSignal"
+        Width="800"
+        MinWidth="420" MinHeight="420">
+  <Design.DataContext>
+    <local:MainWindowViewModel />
+  </Design.DataContext>
+  
+  <Window.Styles>
+    <Style Selector="UniformGrid > TextBlock">
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="VerticalAlignment" Value="Bottom" />
+      <Setter Property="Margin" Value="8,2" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="TextBox">
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Expander">
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="MinWidth" Value="190" />
+    </Style>
+    <Style Selector="Expander > TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource ThemeForegroundBrush}" />
+      <Setter Property="Margin" Value="0,-2" />
+    </Style>
+  </Window.Styles>
+  
+  <Grid RowDefinitions="1*,1*,Auto,Auto">
     <local:PlotView DataContext="{Binding Plots[0]}" Grid.Row="0" />
     <local:PlotView DataContext="{Binding Plots[1]}" Grid.Row="1" />
-    <DockPanel Grid.Row="2">
-      <Button Content="Generate"
-              Command="{Binding GenerateSignal}" 
-              DockPanel.Dock="Right" />
-    </DockPanel>
+    <WrapPanel Grid.Row="2">
+      <Expander IsExpanded="True">
+        <Expander.Header>
+          <TextBlock Text="Signal parameters" />
+        </Expander.Header>
+        <StackPanel>
+          <UniformGrid Name="ModulationParams" 
+                       Rows="2" 
+                       HorizontalAlignment="Stretch">
+            <TextBlock Text="Modulation type" />
+            <TextBlock Text="Modulation depth" />
+            <TextBlock Text="Modulation speed, bps" />
+
+            <ComboBox SelectedIndex="{Binding ModulationType, Mode=TwoWay}"
+                      HorizontalAlignment="Stretch"
+                      VerticalAlignment="Stretch">
+              <ComboBoxItem Content="BASK (OOK)" />
+              <ComboBoxItem Content="BPSK" />
+              <ComboBoxItem Content="BFSK (Freq. telegraph)" />
+            </ComboBox>
+            <TextBox Text="{Binding ModulationDepth, Mode=TwoWay}"/>
+            <TextBox Text="{Binding ModulationSpeed, Mode=TwoWay}"/>
+          </UniformGrid>
+          <UniformGrid Name="CarrierParams" 
+                       Rows="2" 
+                       HorizontalAlignment="Stretch">
+            <TextBlock Text="Sequence length, bits" />
+            <TextBlock Text="Carrier frequency, Hz" />
+            <TextBlock Text="Samplerate, Hz" />
+
+            <TextBox Text="{Binding BitSeqLength, Mode=TwoWay}"/>
+            <TextBox Text="{Binding MainFrequency, Mode=TwoWay}"/>
+            <TextBox Text="{Binding Samplerate, Mode=TwoWay}"/>
+          </UniformGrid>
+        </StackPanel>
+      </Expander>
+      <Expander>
+        <Expander.Header>
+          <TextBlock Text="Simulation param-s" />
+        </Expander.Header>
+        <UniformGrid Rows="2">
+          
+        </UniformGrid>
+      </Expander>
+      <Button Content="Generate" Command="{Binding GenerateSignal}" Width="100" />
+    </WrapPanel>
   </Grid>
 </Window>
