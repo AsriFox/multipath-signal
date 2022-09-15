@@ -16,7 +16,7 @@ namespace MultipathSignal.Views
 		}
 
 		private ObservableCollection<DataPoint> points = new();
-		public System.Collections.Generic.IList<DataPoint> Points {
+		public System.Collections.Generic.IEnumerable<DataPoint> Points {
 			get => points;
 			set => this.RaiseAndSetIfChanged(ref points, 
 				value as ObservableCollection<DataPoint> 

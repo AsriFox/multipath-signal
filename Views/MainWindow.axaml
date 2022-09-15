@@ -2,27 +2,41 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:MultipathSignal.Views"
         x:Class="MultipathSignal.Views.MainWindow"
-        Title="MultipathSignal"
-        Width="800"
-        MinWidth="420" MinHeight="420">
+        Title="Multipath signal - delayed reception"
+        Width="688" Height="800" MinWidth="420" MinHeight="420">
   <Design.DataContext>
     <local:MainWindowViewModel />
   </Design.DataContext>
   
   <Window.Styles>
+    <Style Selector="Button, ToggleButton">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="Margin" Value="2" />
+    </Style>
     <Style Selector="UniformGrid > TextBlock">
       <Setter Property="HorizontalAlignment" Value="Center" />
       <Setter Property="VerticalAlignment" Value="Bottom" />
       <Setter Property="Margin" Value="8,2" />
       <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
-    <Style Selector="TextBox">
+    <Style Selector="NumericUpDown">
+      <Setter Property="AllowSpin" Value="True" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="HorizontalContentAlignment" Value="Center" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
+    <Style Selector="NumericUpDown.ints">
+      <Setter Property="FormatString" Value="{}{0:F0}" />
+    </Style>
+    <Style Selector="NumericUpDown.floats">
+      <Setter Property="FormatString" Value="{}{0:F2}" />
+    </Style>
+    <Style Selector="NumericUpDown.doubles">
+      <Setter Property="FormatString" Value="{}{0:F4}" />
+    </Style>
     <Style Selector="Expander">
       <Setter Property="Padding" Value="0" />
-      <Setter Property="MinWidth" Value="190" />
+      <Setter Property="MinWidth" Value="210" />
     </Style>
     <Style Selector="Expander > TextBlock">
       <Setter Property="Foreground" Value="{StaticResource ThemeForegroundBrush}" />
@@ -30,14 +44,49 @@
     </Style>
   </Window.Styles>
   
-  <Grid RowDefinitions="1*,1*,Auto,Auto">
-    <local:PlotView DataContext="{Binding Plots[0]}" Grid.Row="0" />
-    <local:PlotView DataContext="{Binding Plots[1]}" Grid.Row="1" />
-    <WrapPanel Grid.Row="2">
-      <Expander IsExpanded="True">
+  <DockPanel>
+    <Grid Name="StatusBar" 
+          ColumnDefinitions="0.5*, 0.5*, 2*" 
+          DockPanel.Dock="Bottom">
+      
+      <TextBlock Text="Predicted delay:"
+                 VerticalAlignment="Center"
+                 TextWrapping="Wrap"
+                 Grid.Column="0"
+                 Margin="4" />
+      <TextBox Text="{Binding PredictedDelay, Mode=OneWay}"
+               VerticalContentAlignment="Center"
+               BorderBrush="Transparent"
+               IsReadOnly="True"
+               Grid.Column="1"
+               FontSize="12"
+               Margin="2"/>
+      <TextBlock Text="{Binding Status, Mode=OneWay}"
+                 VerticalAlignment="Center"
+                 Grid.Column="2" 
+                 Margin="4" />
+    </Grid>
+    
+    <UniformGrid Name="ActionButtons" 
+                 DockPanel.Dock="Bottom" 
+                 Rows="1">
+      
+      <Button Content="Generate" 
+              Command="{Binding GenerateSignal}" />
+      
+      <Button Content="Repeat tests" />
+      
+      <ToggleButton Name="ToggleShowCorrel" 
+                    Content="Show correlation" />
+    </UniformGrid>
+    
+    <WrapPanel Name="ParamsBlock" DockPanel.Dock="Bottom">
+      
+      <Expander Name="SignalParams" IsExpanded="True">
         <Expander.Header>
           <TextBlock Text="Signal parameters" />
         </Expander.Header>
+        
         <StackPanel>
           <UniformGrid Name="ModulationParams" 
                        Rows="2" 
@@ -53,9 +102,12 @@
               <ComboBoxItem Content="BPSK" />
               <ComboBoxItem Content="BFSK (Freq. telegraph)" />
             </ComboBox>
-            <TextBox Text="{Binding ModulationDepth, Mode=TwoWay}"/>
-            <TextBox Text="{Binding ModulationSpeed, Mode=TwoWay}"/>
+            <NumericUpDown Value="{Binding ModulationDepth, Mode=TwoWay}"
+                           Classes="doubles"/>
+            <NumericUpDown Value="{Binding ModulationSpeed, Mode=TwoWay}"
+                           Classes="floats"/>
           </UniformGrid>
+          
           <UniformGrid Name="CarrierParams" 
                        Rows="2" 
                        HorizontalAlignment="Stretch">
@@ -63,21 +115,63 @@
             <TextBlock Text="Carrier frequency, Hz" />
             <TextBlock Text="Samplerate, Hz" />
 
-            <TextBox Text="{Binding BitSeqLength, Mode=TwoWay}"/>
-            <TextBox Text="{Binding MainFrequency, Mode=TwoWay}"/>
-            <TextBox Text="{Binding Samplerate, Mode=TwoWay}"/>
+            <NumericUpDown Value="{Binding BitSeqLength, Mode=TwoWay}"
+                           Classes="ints" />
+            <NumericUpDown Value="{Binding MainFrequency, Mode=TwoWay}"
+                           Classes="floats"/>
+            <NumericUpDown Value="{Binding Samplerate, Mode=TwoWay}"
+                           Classes="ints" />
           </UniformGrid>
         </StackPanel>
       </Expander>
-      <Expander>
+      
+      <Expander Name="SimulationParams" IsExpanded="True">
         <Expander.Header>
           <TextBlock Text="Simulation param-s" />
         </Expander.Header>
-        <UniformGrid Rows="2">
+        
+        <StackPanel>
+          <UniformGrid Name="NoiseParams"
+                       Rows="2"
+                       HorizontalAlignment="Stretch">
+            <TextBlock Text="SNR for clean, dB" />
+            <TextBlock Text="SNR for noisy, dB" />
+
+            <NumericUpDown Value="{Binding SNRClean, Mode=TwoWay}"
+                           Classes="floats" />
+            <NumericUpDown Value="{Binding SNRNoisy, Mode=TwoWay}"
+                           Classes="floats" />
+          </UniformGrid>
           
-        </UniformGrid>
+          <UniformGrid Name="ReceiverParams"
+                       Rows="2"
+                       HorizontalAlignment="Stretch">
+            <TextBlock Text="Receive delay, s"
+                       Classes="doubles" />
+            <TextBlock Text="Repeat tests count" />
+
+            <NumericUpDown Value="{Binding ReceiveDelay, Mode=TwoWay}"
+                           Classes="doubles" />
+            <NumericUpDown Value="{Binding TestsRepeatCount, Mode=TwoWay}"
+                           Classes="ints" />
+          </UniformGrid>
+        </StackPanel>
       </Expander>
-      <Button Content="Generate" Command="{Binding GenerateSignal}" Width="100" />
     </WrapPanel>
-  </Grid>
+    
+    <Carousel Name="PlotsPanel" 
+              Grid.Row="0" 
+              SelectedIndex="{Binding #ToggleShowCorrel.IsChecked}">
+      
+      <UniformGrid Name="SignalPlots" Rows="2">
+        <local:PlotView DataContext="{Binding Plots[0]}" />
+        <local:PlotView DataContext="{Binding Plots[1]}" />
+      </UniformGrid>
+      
+      <UniformGrid Name="CorrelPlots" Rows="2">
+        <local:PlotView DataContext="{Binding Plots[2]}" />
+        <local:PlotView DataContext="{Binding Plots[3]}" />
+      </UniformGrid>
+    </Carousel>
+  </DockPanel>
 </Window>
