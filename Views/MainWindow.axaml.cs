@@ -8,7 +8,7 @@ namespace MultipathSignal.Views
 		private MainWindowViewModel ViewModel {
 			get {
 				if (DataContext is not MainWindowViewModel @mvvm)
-					DataContext = @mvvm = MainWindowViewModel.Default;
+					DataContext = @mvvm = new MainWindowViewModel();
 				return @mvvm;
 			}
 		}
@@ -17,6 +17,12 @@ namespace MultipathSignal.Views
 		{
 			InitializeComponent();
 			if (ViewModel is null) throw new System.NullReferenceException();
+		}
+
+		private void PointerMoveFocus(object? sender, Avalonia.Input.PointerEventArgs e)
+		{
+			if (sender is NumberBox numbox) numbox.Focus();
+			else (sender as Avalonia.Controls.Control)?.Focus();
 		}
 	}
 }

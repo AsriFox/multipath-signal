@@ -1,0 +1,33 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:MultipathSignal.Views">
+  <Design.PreviewWith>
+    <local:NumberBox Header="Template" Value="0" Format="{}{0:F4}" />
+  </Design.PreviewWith>
+  
+  <Style Selector="local|NumberBox">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <DockPanel>
+          <TextBlock Text="{TemplateBinding Header}"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Bottom"
+                     DockPanel.Dock="Top"
+                     TextWrapping="Wrap"
+                     Margin="8,2"/>
+          <NumericUpDown FormatString="{TemplateBinding Format}"
+                         Value="{TemplateBinding Value, Mode=TwoWay}"
+                         Increment="{TemplateBinding Step}"
+                         AllowSpin="True"
+                         Height="{Binding FontSize, RelativeSource={RelativeSource Self}}"
+                         Background="Transparent"
+                         HorizontalAlignment="Stretch"
+                         HorizontalContentAlignment="Center"
+                         VerticalContentAlignment="Center"
+                         IsEnabled="{TemplateBinding IsEnabled}"
+                         Margin="-10,0" />
+        </DockPanel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+</Styles>

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
+using System.Threading.Tasks;
 
 namespace MultipathSignal.Core
 {
@@ -37,8 +39,5 @@ namespace MultipathSignal.Core
 				result[start + i] = lerpMid(start + i);
 			return result;
 		}
-
-		//public static IEnumerable<OxyPlot.DataPoint> ValuesToPoints(IEnumerable<double> values) =>
-		//	values.Select((v, i) => new OxyPlot.DataPoint(i, v));
 	}
 }

@@ -9,30 +9,15 @@
   </Design.DataContext>
   
   <Window.Styles>
+    <StyleInclude Source="/Views/NumberBox.axaml" />
     <Style Selector="Button, ToggleButton">
       <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="Margin" Value="2" />
     </Style>
-    <Style Selector="UniformGrid > TextBlock">
-      <Setter Property="HorizontalAlignment" Value="Center" />
-      <Setter Property="VerticalAlignment" Value="Bottom" />
-      <Setter Property="Margin" Value="8,2" />
-      <Setter Property="TextWrapping" Value="Wrap" />
-    </Style>
-    <Style Selector="NumericUpDown">
-      <Setter Property="AllowSpin" Value="True" />
+    <Style Selector="local|NumberBox">
       <Setter Property="HorizontalAlignment" Value="Stretch" />
-      <Setter Property="HorizontalContentAlignment" Value="Center" />
-      <Setter Property="VerticalContentAlignment" Value="Center" />
-    </Style>
-    <Style Selector="NumericUpDown.ints">
-      <Setter Property="FormatString" Value="{}{0:F0}" />
-    </Style>
-    <Style Selector="NumericUpDown.floats">
-      <Setter Property="FormatString" Value="{}{0:F2}" />
-    </Style>
-    <Style Selector="NumericUpDown.doubles">
-      <Setter Property="FormatString" Value="{}{0:F4}" />
+      <Setter Property="Margin" Value="0,8,0,0" />
+      <Setter Property="IsEnabled" Value="{Binding EditMode}" />
     </Style>
     <Style Selector="Expander">
       <Setter Property="Padding" Value="0" />
@@ -64,7 +49,7 @@
       <TextBlock Text="{Binding Status, Mode=OneWay}"
                  VerticalAlignment="Center"
                  Grid.Column="2" 
-                 Margin="4" />
+                 Margin="4,0" />
     </Grid>
     
     <UniformGrid Name="ActionButtons" 
@@ -72,12 +57,18 @@
                  Rows="1">
       
       <Button Content="Generate" 
-              Command="{Binding GenerateSignal}" />
+              Command="{Binding ProcessSignal}" 
+              IsEnabled="{Binding EditMode}" 
+              PointerEnter="PointerMoveFocus" />
       
-      <Button Content="Repeat tests" />
+      <Button Content="Repeat tests"
+              Command="{Binding ProcessRepeat}" 
+              IsEnabled="{Binding EditMode}" 
+              PointerEnter="PointerMoveFocus" />
       
       <ToggleButton Name="ToggleShowCorrel" 
-                    Content="Show correlation" />
+                    Content="Show correlation" 
+                    PointerEnter="PointerMoveFocus" />
     </UniformGrid>
     
     <WrapPanel Name="ParamsBlock" DockPanel.Dock="Bottom">
@@ -87,42 +78,55 @@
           <TextBlock Text="Signal parameters" />
         </Expander.Header>
         
-        <StackPanel>
-          <UniformGrid Name="ModulationParams" 
-                       Rows="2" 
-                       HorizontalAlignment="Stretch">
-            <TextBlock Text="Modulation type" />
-            <TextBlock Text="Modulation depth" />
-            <TextBlock Text="Modulation speed, bps" />
-
+        <UniformGrid Rows="2">
+          <DockPanel>
+            <TextBlock Text="Modulation type"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Bottom"
+                       DockPanel.Dock="Top"
+                       TextWrapping="Wrap"
+                       Margin="8,10,8,2" />
             <ComboBox SelectedIndex="{Binding ModulationType, Mode=TwoWay}"
-                      HorizontalAlignment="Stretch"
-                      VerticalAlignment="Stretch">
+                    HorizontalAlignment="Stretch"
+                    VerticalAlignment="Stretch"
+                    IsEnabled="{Binding EditMode}" 
+                    PointerEnter="PointerMoveFocus">
               <ComboBoxItem Content="BASK (OOK)" />
               <ComboBoxItem Content="BPSK" />
-              <ComboBoxItem Content="BFSK (Freq. telegraph)" />
+              <ComboBoxItem Content="BFSK (FT)" />
             </ComboBox>
-            <NumericUpDown Value="{Binding ModulationDepth, Mode=TwoWay}"
-                           Classes="doubles"/>
-            <NumericUpDown Value="{Binding ModulationSpeed, Mode=TwoWay}"
-                           Classes="floats"/>
-          </UniformGrid>
-          
-          <UniformGrid Name="CarrierParams" 
-                       Rows="2" 
-                       HorizontalAlignment="Stretch">
-            <TextBlock Text="Sequence length, bits" />
-            <TextBlock Text="Carrier frequency, Hz" />
-            <TextBlock Text="Samplerate, Hz" />
+          </DockPanel>
 
-            <NumericUpDown Value="{Binding BitSeqLength, Mode=TwoWay}"
-                           Classes="ints" />
-            <NumericUpDown Value="{Binding MainFrequency, Mode=TwoWay}"
-                           Classes="floats"/>
-            <NumericUpDown Value="{Binding Samplerate, Mode=TwoWay}"
-                           Classes="ints" />
-          </UniformGrid>
-        </StackPanel>
+          <local:NumberBox Header="Modulation depth"
+                           Format="{}{0:F4}"
+                           Step="0.01"
+                           Value="{Binding ModulationDepth, Mode=TwoWay}"
+                           PointerEnter="PointerMoveFocus" />
+          
+          <local:NumberBox Header="Modulation speed, bps"
+                           Format="{}{0:F2}"
+                           Step="10"
+                           Value="{Binding ModulationSpeed, Mode=TwoWay}"
+                           PointerEnter="PointerMoveFocus" />
+          
+          <local:NumberBox Header="Sequence length, bits"
+                           Format="{}{0:F0}"
+                           Step="1"
+                           Value="{Binding BitSeqLength, Mode=TwoWay}" 
+                           PointerEnter="PointerMoveFocus" />
+          
+          <local:NumberBox Header="Carrier frequency, Hz"
+                           Format="{}{0:F2}"
+                           Step="100"
+                           Value="{Binding MainFrequency, Mode=TwoWay}" 
+                           PointerEnter="PointerMoveFocus" />
+          
+          <local:NumberBox Header="Samplerate, Hz"
+                           Format="{}{0:F0}"
+                           Step="1000"
+                           Value="{Binding Samplerate, Mode=TwoWay}" 
+                           PointerEnter="PointerMoveFocus" />
+        </UniformGrid>
       </Expander>
       
       <Expander Name="SimulationParams" IsExpanded="True">
@@ -130,32 +134,31 @@
           <TextBlock Text="Simulation param-s" />
         </Expander.Header>
         
-        <StackPanel>
-          <UniformGrid Name="NoiseParams"
-                       Rows="2"
-                       HorizontalAlignment="Stretch">
-            <TextBlock Text="SNR for clean, dB" />
-            <TextBlock Text="SNR for noisy, dB" />
+        <UniformGrid Rows="2">
+          <local:NumberBox Header="SNR for clean, dB"
+                           Format="{}{0:F2}"
+                           Step="1"
+                           Value="{Binding SNRClean, Mode=TwoWay}" 
+                           PointerEnter="PointerMoveFocus" />
 
-            <NumericUpDown Value="{Binding SNRClean, Mode=TwoWay}"
-                           Classes="floats" />
-            <NumericUpDown Value="{Binding SNRNoisy, Mode=TwoWay}"
-                           Classes="floats" />
-          </UniformGrid>
+          <local:NumberBox Header="SNR for noisy, dB"
+                           Format="{}{0:F2}"
+                           Step="1"
+                           Value="{Binding SNRNoisy, Mode=TwoWay}" 
+                           PointerEnter="PointerMoveFocus" />
           
-          <UniformGrid Name="ReceiverParams"
-                       Rows="2"
-                       HorizontalAlignment="Stretch">
-            <TextBlock Text="Receive delay, s"
-                       Classes="doubles" />
-            <TextBlock Text="Repeat tests count" />
-
-            <NumericUpDown Value="{Binding ReceiveDelay, Mode=TwoWay}"
-                           Classes="doubles" />
-            <NumericUpDown Value="{Binding TestsRepeatCount, Mode=TwoWay}"
-                           Classes="ints" />
-          </UniformGrid>
-        </StackPanel>
+          <local:NumberBox Header="Receive delay, s"
+                           Format="{}{0:F4}"
+                           Step="0.001"
+                           Value="{Binding ReceiveDelay, Mode=TwoWay}" 
+                           PointerEnter="PointerMoveFocus" />
+          
+          <local:NumberBox Header="Repeat tests count"
+                           Format="{}{0:F0}"
+                           Step="100"
+                           Value="{Binding TestsRepeatCount, Mode=TwoWay}" 
+                           PointerEnter="PointerMoveFocus" />
+        </UniformGrid>
       </Expander>
     </WrapPanel>
     
