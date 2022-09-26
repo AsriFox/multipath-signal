@@ -19,25 +19,29 @@ namespace MultipathSignal.Core
 
 		public const int MaxPointsCount = 80000;
 
-		public static IEnumerable<double> ValuesCutout(IList<double> values, int start, int end) 
+		public static IEnumerable<OxyPlot.DataPoint> Plotify(this IList<double> values) 
 		{
-			throw new NotImplementedException();
+			if (values.Count <= MaxPointsCount)
+				return values.Select((v, i) => new OxyPlot.DataPoint(i / SignalGenerator.Samplerate, v));
 
-			if (values.Count <= MaxPointsCount) 
-				return values.Skip(start).Take(end);
+			int div = 2;
+			while (values.Count / div > MaxPointsCount)
+				div <<= 1;
 
-			double k = (double)values.Count / MaxPointsCount;
-			double lerpMid(int i) {
-				double t = i * k;
-				int i0 = (int)Math.Floor(t);
-				t =- i0;
-				return values[i0] * t + values[i0 + 1] * (1.0 - t);
-			}
-
-			var result = new double[MaxPointsCount];
-			for (int i = 0; i < MaxPointsCount; i++)
-				result[start + i] = lerpMid(start + i);
+			var result = new OxyPlot.DataPoint[values.Count / div];
+			for (int i = 0; i < values.Count; i += div)
+				result[i / div] = new OxyPlot.DataPoint(i / SignalGenerator.Samplerate, values[i]);
 			return result;
+
+			//static double lerp(double a, double b, double t) => a * t + (1.0 - t) * b;
+
+			//var result = new double[MaxPointsCount];
+			//for (int i = 0; i < MaxPointsCount; i++) {
+			//	double k = start + c * (double)i / MaxPointsCount;
+			//	int j = (int)Math.Floor(k);
+			//	result[i] = lerp(values[j], values[j + 1], k - j);
+			//}
+			//return result;
 		}
 	}
 }

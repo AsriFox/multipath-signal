@@ -3,7 +3,7 @@
         xmlns:local="clr-namespace:MultipathSignal.Views"
         x:Class="MultipathSignal.Views.MainWindow"
         Title="Multipath signal - delayed reception"
-        Width="688" Height="800" MinWidth="420" MinHeight="420">
+        Width="783" Height="800" MinWidth="440" MinHeight="420">
   <Design.DataContext>
     <local:MainWindowViewModel />
   </Design.DataContext>
@@ -12,16 +12,20 @@
     <StyleInclude Source="/Views/NumberBox.axaml" />
     <Style Selector="Button, ToggleButton">
       <Setter Property="HorizontalAlignment" Value="Stretch" />
-      <Setter Property="Margin" Value="2" />
+      <Setter Property="Margin" Value="0" />
+    </Style>
+    <Style Selector="ListBoxItem > TextBlock">
+      <Setter Property="FontSize" Value="12" />
     </Style>
     <Style Selector="local|NumberBox">
       <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="VerticalAlignment" Value="Bottom" />
       <Setter Property="Margin" Value="0,8,0,0" />
       <Setter Property="IsEnabled" Value="{Binding EditMode}" />
     </Style>
     <Style Selector="Expander">
       <Setter Property="Padding" Value="0" />
-      <Setter Property="MinWidth" Value="210" />
+      <Setter Property="MinWidth" Value="220" />
     </Style>
     <Style Selector="Expander > TextBlock">
       <Setter Property="Foreground" Value="{StaticResource ThemeForegroundBrush}" />
@@ -48,6 +52,7 @@
                Margin="2"/>
       <TextBlock Text="{Binding Status, Mode=OneWay}"
                  VerticalAlignment="Center"
+                 TextWrapping="Wrap"
                  Grid.Column="2" 
                  Margin="4,0" />
     </Grid>
@@ -56,18 +61,13 @@
                  DockPanel.Dock="Bottom" 
                  Rows="1">
       
-      <Button Content="Generate" 
-              Command="{Binding ProcessSignal}" 
-              IsEnabled="{Binding EditMode}" 
-              PointerEnter="PointerMoveFocus" />
-      
-      <Button Content="Repeat tests"
-              Command="{Binding ProcessRepeat}" 
-              IsEnabled="{Binding EditMode}" 
+      <Button Content="Launch the simulation" 
+              Command="{Binding Process}" 
+              IsEnabled="{Binding EditMode}"
               PointerEnter="PointerMoveFocus" />
       
       <ToggleButton Name="ToggleShowCorrel" 
-                    Content="Show correlation" 
+                    Content="Show correlation"
                     PointerEnter="PointerMoveFocus" />
     </UniformGrid>
     
@@ -133,32 +133,78 @@
         <Expander.Header>
           <TextBlock Text="Simulation param-s" />
         </Expander.Header>
-        
-        <UniformGrid Rows="2">
+
+        <Grid ColumnDefinitions="*,*,*,*" RowDefinitions="*,*">
+          <local:NumberBox Header="Receive delay, s"
+                           Format="{}{0:F4}"
+                           Step="0.001"
+                           Value="{Binding ReceiveDelay, Mode=TwoWay}"
+                           PointerEnter="PointerMoveFocus"
+                           Grid.Column="0"
+                           Grid.Row="0" />
+
           <local:NumberBox Header="SNR for clean, dB"
                            Format="{}{0:F2}"
                            Step="1"
-                           Value="{Binding SNRClean, Mode=TwoWay}" 
-                           PointerEnter="PointerMoveFocus" />
+                           Value="{Binding SNRClean, Mode=TwoWay}"
+                           PointerEnter="PointerMoveFocus"
+                           Grid.Column="1"
+                           Grid.Row="0" />
 
           <local:NumberBox Header="SNR for noisy, dB"
                            Format="{}{0:F2}"
                            Step="1"
-                           Value="{Binding SNRNoisy, Mode=TwoWay}" 
-                           PointerEnter="PointerMoveFocus" />
-          
-          <local:NumberBox Header="Receive delay, s"
-                           Format="{}{0:F4}"
-                           Step="0.001"
-                           Value="{Binding ReceiveDelay, Mode=TwoWay}" 
-                           PointerEnter="PointerMoveFocus" />
-          
+                           Value="{Binding SNRNoisy, Mode=TwoWay}"
+                           PointerEnter="PointerMoveFocus"
+                           Grid.Column="2"
+                           Grid.Row="0" />
+
+          <ListBox Name="SimVariants"
+                   SelectedIndex="{Binding SimulationMode, Mode=TwoWay}"
+                   Padding="0"
+                   BorderBrush="Transparent"
+                   VerticalAlignment="Bottom"
+                   SelectionMode="Single"
+                   Grid.Column="0"
+                   Grid.Row="1">
+
+            <ListBoxItem Name="SimVariantSingle"
+                          Content="Single test" />
+
+            <ListBoxItem Name="SimVariantMulti"
+                          Content="Multiple tests" />
+
+            <ListBoxItem Name="SimVariantFull"
+                          Content="Gather statistics" />
+          </ListBox>
+
           <local:NumberBox Header="Repeat tests count"
                            Format="{}{0:F0}"
                            Step="100"
-                           Value="{Binding TestsRepeatCount, Mode=TwoWay}" 
-                           PointerEnter="PointerMoveFocus" />
-        </UniformGrid>
+                           Value="{Binding TestsRepeatCount, Mode=TwoWay}"
+                           IsVisible="{Binding !#SimVariantSingle.IsSelected}"
+                           PointerEnter="PointerMoveFocus"
+                           Grid.Column="1"
+                           Grid.Row="1" />
+          
+          <local:NumberBox Header="SNR maximum, dB"
+                           Format="{}{0:F2}"
+                           Step="1"
+                           Value="{Binding SNRNoisyMax, Mode=TwoWay}"
+                           IsVisible="{Binding #SimVariantFull.IsSelected}"
+                           PointerEnter="PointerMoveFocus"
+                           Grid.Column="3"
+                           Grid.Row="0" />
+          
+          <local:NumberBox Header="SNR step size, dB"
+                           Format="{}{0:F2}"
+                           Step="1"
+                           Value="{Binding SNRNoisyStep, Mode=TwoWay}"
+                           IsVisible="{Binding #SimVariantFull.IsSelected}"
+                           PointerEnter="PointerMoveFocus"
+                           Grid.Column="3"
+                           Grid.Row="1" />
+        </Grid>
       </Expander>
     </WrapPanel>
     
