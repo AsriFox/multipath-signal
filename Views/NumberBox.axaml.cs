@@ -6,6 +6,13 @@ namespace MultipathSignal.Views
 {
 	public class NumberBox : TemplatedControl
 	{
+		public NumberBox() {
+			Header = "null";
+			Format = "{0}";
+			Minimum = double.NegativeInfinity;
+			Maximum = double.PositiveInfinity;
+		}
+
 		public readonly static StyledProperty<string> HeaderProperty = AvaloniaProperty.Register<NumberBox, string>(nameof(Header));
 		public string Header {
 			get => GetValue(HeaderProperty);
@@ -22,6 +29,18 @@ namespace MultipathSignal.Views
 		public double Value {
 			get => GetValue(ValueProperty);
 			set => SetValue(ValueProperty, value);
+		}
+
+		public readonly static StyledProperty<double> MinimumProperty = AvaloniaProperty.Register<NumberBox, double>(nameof(Minimum));
+		public double Minimum {
+			get => GetValue(MinimumProperty);
+			set => SetValue(MinimumProperty, value);
+		}
+
+		public readonly static StyledProperty<double> MaximumProperty = AvaloniaProperty.Register<NumberBox, double>(nameof(Maximum));
+		public double Maximum {
+			get => GetValue(MaximumProperty);
+			set => SetValue(MaximumProperty, value);
 		}
 
 		public readonly static StyledProperty<double> StepProperty = AvaloniaProperty.Register<NumberBox, double>(nameof(Step));

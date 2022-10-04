@@ -17,6 +17,8 @@
                      Margin="8,2"/>
           <NumericUpDown FormatString="{TemplateBinding Format}"
                          Value="{TemplateBinding Value, Mode=TwoWay}"
+                         Minimum="{TemplateBinding Minimum}"
+                         Maximum="{TemplateBinding Maximum}"
                          Increment="{TemplateBinding Step}"
                          AllowSpin="True"
                          Height="{Binding FontSize, RelativeSource={RelativeSource Self}}"

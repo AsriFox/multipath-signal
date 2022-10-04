@@ -57,19 +57,27 @@
                  Margin="4,0" />
     </Grid>
     
-    <UniformGrid Name="ActionButtons" 
-                 DockPanel.Dock="Bottom" 
-                 Rows="1">
+    <Grid Name="ActionButtons" 
+          DockPanel.Dock="Bottom" 
+          ColumnDefinitions="*,*">
       
       <Button Content="Launch the simulation" 
               Command="{Binding Process}" 
-              IsEnabled="{Binding EditMode}"
+              Grid.Column="0"
+              IsVisible="{Binding EditMode}"
               PointerEnter="PointerMoveFocus" />
-      
+
+      <Button Content="Stop the simulation"
+              Command="{Binding StopProcess}"
+              Grid.Column="0"
+              IsVisible="{Binding !EditMode}"
+              PointerEnter="PointerMoveFocus" />
+              
       <ToggleButton Name="ToggleShowCorrel" 
                     Content="Show correlation"
+                    Grid.Column="1"
                     PointerEnter="PointerMoveFocus" />
-    </UniformGrid>
+    </Grid>
     
     <WrapPanel Name="ParamsBlock" DockPanel.Dock="Bottom">
       
@@ -101,30 +109,36 @@
                            Format="{}{0:F4}"
                            Step="0.01"
                            Value="{Binding ModulationDepth, Mode=TwoWay}"
+                           Minimum="0"
+                           Maximum="1"
                            PointerEnter="PointerMoveFocus" />
           
           <local:NumberBox Header="Modulation speed, bps"
                            Format="{}{0:F2}"
                            Step="10"
                            Value="{Binding ModulationSpeed, Mode=TwoWay}"
+                           Minimum="10"
                            PointerEnter="PointerMoveFocus" />
           
           <local:NumberBox Header="Sequence length, bits"
                            Format="{}{0:F0}"
                            Step="1"
                            Value="{Binding BitSeqLength, Mode=TwoWay}" 
+                           Minimum="1"
                            PointerEnter="PointerMoveFocus" />
           
           <local:NumberBox Header="Carrier frequency, Hz"
                            Format="{}{0:F2}"
                            Step="100"
                            Value="{Binding MainFrequency, Mode=TwoWay}" 
+                           Minimum="100"
                            PointerEnter="PointerMoveFocus" />
           
           <local:NumberBox Header="Samplerate, Hz"
                            Format="{}{0:F0}"
                            Step="1000"
-                           Value="{Binding Samplerate, Mode=TwoWay}" 
+                           Value="{Binding Samplerate, Mode=TwoWay}"
+                           Minimum="1000" 
                            PointerEnter="PointerMoveFocus" />
         </UniformGrid>
       </Expander>
@@ -139,6 +153,7 @@
                            Format="{}{0:F4}"
                            Step="0.001"
                            Value="{Binding ReceiveDelay, Mode=TwoWay}"
+                           Minimum="0"
                            PointerEnter="PointerMoveFocus"
                            Grid.Column="0"
                            Grid.Row="0" />
@@ -182,6 +197,7 @@
                            Format="{}{0:F0}"
                            Step="100"
                            Value="{Binding TestsRepeatCount, Mode=TwoWay}"
+                           Minimum="1"
                            IsVisible="{Binding !#SimVariantSingle.IsSelected}"
                            PointerEnter="PointerMoveFocus"
                            Grid.Column="1"
