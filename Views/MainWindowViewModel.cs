@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 using MultipathSignal.Core;
 using OxyPlot;
 using ReactiveUI;
@@ -24,73 +25,94 @@ namespace MultipathSignal.Views
 				new PlotViewModel { Title = "Clean signal" },
 				new PlotViewModel { Title = "Noisy signal" },
 				new PlotViewModel { Title = "Correlation" },
-				new PlotViewModel { Title = "Statistics" },
+				new PlotViewModel { Title = "Statistics", MinimumY = 0.0, MaximumY = 1.0 },
 			};
 			Plots.CollectionChanged += (_, _) => this.RaisePropertyChanged(nameof(Plots));
 		}
 
-		private readonly CancellationTokenSource cancellation = new();
-
-		public async Task<double> FindPredictedDelay(double receiveDelay, bool output = false, CancellationToken? token = null)
+		public async void Process()
 		{
-			if (token?.IsCancellationRequested == true)
-				throw new TaskCanceledException();
-
-			var gen = new SignalModulator {
+			EditMode = false;
+			SignalGenerator.Samplerate = Samplerate;
+			Statistics stat = new() {
 				MainFrequency = MainFrequency,
-				BitRate = ModulationSpeed,
-				Method = ModulationType,
-				Depth = ModulationDepth
+				ModulationSpeed = ModulationSpeed,
+				ModulationType = ModulationType,
+				ModulationDepth = ModulationDepth
 			};
+			stat.StatusChanged += OnStatusChanged;
+			stat.PlotDataReady += OnPlotDataReady;
 
-			if (token?.IsCancellationRequested == true)
-				throw new TaskCanceledException();
-			
-			int bitDelay = (int)Math.Ceiling(receiveDelay * Samplerate / ModulationSpeed);
-			var signal = await gen.ModulateAsync(
-				Utils.RandomBitSeq(
-					bitDelay + BitSeqLength + Utils.RNG.Next(bitDelay, BitSeqLength)));
-			
-			if (token?.IsCancellationRequested == true)
-				throw new TaskCanceledException();
+			try { 
+				switch (SimulationMode) {
+					case 0:     // Single test
+						Status = "Processing one signal...";
+						PredictedDelay = await stat.FindPredictedDelayAsync(ReceiveDelay, SNRClean, SNRNoisy, true);
+						break;
 
-			int initDelay = (int)(bitDelay * Samplerate / ModulationSpeed);
+					case 1:     // Multiple tests
+						Status = "Processing signals...";
+						var stopw = new Stopwatch();
+						stopw.Start();
+						var tasks = Enumerable.Range(0, TestsRepeatCount)
+											.Select(_ => stat.FindPredictedDelayAsync(ReceiveDelay, SNRClean, SNRNoisy))
+											.ToList();
+						tasks.Add(stat.FindPredictedDelayAsync(ReceiveDelay, SNRClean, SNRNoisy, true));
 
-			var clearSignal = NoiseGenerator.Apply(
-								  signal.Skip(initDelay)
-										.Take((int)(BitSeqLength * Samplerate / ModulationSpeed))
-										.ToList(),
-								  Math.Pow(10.0, 0.1 * SNRClean));
+						var results = await Task.WhenAll(tasks);
+						PredictedDelay = results.Sum() / results.Length;
+						
+						stopw.Stop();
+						Status = $"{TestsRepeatCount} tasks were completed in {stopw.Elapsed.TotalSeconds:F2} s. Ready.";
+						break;
 
-			signal = NoiseGenerator.Apply(
-						 signal.Skip(initDelay - (int)(receiveDelay * Samplerate))
-							   .ToList(),
-						 Math.Pow(10, 0.1 * SNRNoisy));
+					case 2:     // Gather statistics
+						Plots[3].Points = new List<DataPoint>();
+						double snr = SNRNoisy;
+						double snrMax = SNRNoisyMax + 0.5 * SNRNoisyStep;
+						double threshold = 0.5 / ModulationSpeed;
+						while (snr < snrMax) {
+							if (Utils.Cancellation.IsCancellationRequested) break;
 
-			if (token?.IsCancellationRequested == true)
-				throw new TaskCanceledException();
+							Status = $"Processing signals with SNR = {snr:F2} dB";
+							var actualDelays = new List<double>();
+							var tasks2 = new List<Task<double>>();
+							for (int i = 0; i < TestsRepeatCount; i++) {
+								double delay = ReceiveDelay * 2.0 * Utils.RNG.NextDouble();
+								actualDelays.Add(delay);
+								tasks2.Add(stat.FindPredictedDelayAsync(delay, SNRClean, snr));
+							}
+							actualDelays.Add(ReceiveDelay * 2.0 * Utils.RNG.NextDouble());
+							tasks2.Add(stat.FindPredictedDelayAsync(actualDelays.Last(), SNRClean, snr, true));
 
-			if (output)
-				Status = "Signal generation is complete. Calculating correlation...";
+							var results2 = await Task.WhenAll(tasks2);
+							int gotitCount = 0;
+							for (int i = 0; i < results2.Length; i++)
+								if (Math.Abs(results2[i] - actualDelays[i]) < threshold)
+									gotitCount++;
 
-			var correl = await Statistics.CorrelationAsync(signal, clearSignal);
-
-			int maxPos = 0;
-			double maxVal = 0.0;
-			for (int i = 0; i < correl.Count; i++)
-				if (Math.Abs(correl[i]) > maxVal)
-				{
-					maxVal = Math.Abs(correl[i]);
-					maxPos = i;
+							(Plots[3].Points as IList<DataPoint>)?.Add(new DataPoint(snr, (double)gotitCount / results2.Length));
+							snr += SNRNoisyStep;
+						}
+						break;
 				}
-			var prediction = maxPos / Samplerate;
+			}
+			catch (TaskCanceledException) {
+				Status = "Operation was cancelled.";
+				Utils.Cancellation = new();
+			}
+			EditMode = true;
+		}
 
-			if (output) {
-				if (token?.IsCancellationRequested == true)
-					throw new TaskCanceledException();
-					
-				Status = "Data was generated successfully. Plotting...";
+		public void StopProcess() => Utils.Cancellation.Cancel();
 
+		public void OnStatusChanged(string status) => Status = status;
+
+		public void OnPlotDataReady(IList<double> clearSignal, IList<double> signal, IList<double> correl)
+		{
+			Status = "Data was generated successfully. Plotting...";
+
+			Dispatcher.UIThread.InvokeAsync(() => {
 				Plots[0].Points = clearSignal.Plotify();
 				//	.Select((v, i) => new OxyPlot.DataPoint(i / Samplerate, v));
 
@@ -99,82 +121,9 @@ namespace MultipathSignal.Views
 
 				Plots[2].Points = correl.Plotify();
 				//	.Select((v, i) => new OxyPlot.DataPoint(i / Samplerate, v));
+			});
 
-				Status = "Procedure was completed. Ready.";
-			}
-
-			return prediction;
-		}
-
-		public async void Process()
-		{
-			EditMode = false;
-			SignalGenerator.Samplerate = Samplerate;
-			switch (SimulationMode) {
-				case 0:     // Single test
-					Status = "Processing one signal...";
-					PredictedDelay = await FindPredictedDelay(ReceiveDelay, true);
-					break;
-
-				case 1:     // Multiple tests
-					Status = "Processing signals...";
-					try {
-						var stopw = new Stopwatch();
-						stopw.Start();
-						var tasks = Enumerable.Range(0, TestsRepeatCount)
-											.Select(_ => FindPredictedDelay(ReceiveDelay, token: cancellation.Token))
-											.ToList();
-						tasks.Add(FindPredictedDelay(ReceiveDelay, true, cancellation.Token));
-
-						var results = await Task.WhenAll(tasks);
-						PredictedDelay = results.Sum() / results.Length;
-						
-						stopw.Stop();
-						Status = $"{TestsRepeatCount} tasks were completed in {stopw.Elapsed.TotalSeconds:F2} s. Ready.";
-					}
-					catch (TaskCanceledException) {
-						Status = "Operation was cancelled.";
-					}
-					break;
-
-				case 2:     // Gather statistics
-					Plots[3].Points = new List<DataPoint>();
-					double snr = SNRNoisy;
-					double snrMax = SNRNoisyMax + 0.5 * SNRNoisyStep;
-					while (snr < snrMax) {
-						Status = $"Processing signals with SNR = {snr:F2} dB";
-						try {
-							var actualDelays = new List<double>();
-							var tasks2 = new List<Task<double>>();
-							for (int i = 0; i < TestsRepeatCount; i++) {
-								double delay = ReceiveDelay * 2.0 * Utils.RNG.NextDouble();
-								actualDelays.Add(delay);
-								tasks2.Add(FindPredictedDelay(delay, token: cancellation.Token));
-							}
-							actualDelays.Add(ReceiveDelay * 2.0 * Utils.RNG.NextDouble());
-							tasks2.Add(FindPredictedDelay(actualDelays.Last(), true, cancellation.Token));
-
-							var results2 = await Task.WhenAll(tasks2);
-							int gotitCount = 0;
-							for (int i = 0; i < results2.Length; i++)
-								if (Math.Abs(results2[i] - actualDelays[i]) < 0.1)
-									gotitCount++;
-
-							(Plots[3].Points as IList<DataPoint>)?.Add(new DataPoint(snr, (double)gotitCount / results2.Length));
-							snr += SNRNoisyStep;
-						}
-						catch (TaskCanceledException) {
-							Status = "Operation was cancelled.";
-						}
-					}
-					break;
-			}
-			EditMode = true;
-		}
-
-		public void StopProcess()
-		{
-			cancellation.Cancel();
+			Status = "Procedure was completed. Ready.";
 		}
 
 		#region Modulation parameters

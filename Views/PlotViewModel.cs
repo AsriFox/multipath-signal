@@ -23,6 +23,18 @@ namespace MultipathSignal.Views
 				?? new ObservableCollection<DataPoint>(value));
 		}
 
+		private double minimumY = double.NaN;
+		public double MinimumY {
+			get => minimumY;
+			set => this.RaiseAndSetIfChanged(ref minimumY, value);
+		}
+
+		private double maximumY = double.NaN;
+		public double MaximumY {
+			get => maximumY;
+			set => this.RaiseAndSetIfChanged(ref maximumY, value);
+		}
+
 		public PlotViewModel()
 		{
 			this.PropertyChanged += OnPropertyChanged;
@@ -42,7 +54,13 @@ namespace MultipathSignal.Views
 			points.CollectionChanged += OnCollectionChanged;
 
 			Model = new PlotModel();
-			Model.Axes.Add(new LinearAxis { Position = AxisPosition.Left });
+			Model.Axes.Add(
+				new LinearAxis { 
+					Position = AxisPosition.Left, 
+					Minimum = minimumY, 
+					Maximum = maximumY 
+				}
+			);
 
 			var s = new LineSeries { LineStyle = LineStyle.Solid, Color = OxyColors.Blue };
 			s.Points.AddRange(points);
