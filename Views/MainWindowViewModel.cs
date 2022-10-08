@@ -22,11 +22,12 @@ namespace MultipathSignal.Views
 		public MainWindowViewModel()
 		{
 			Plots = new() {
-				new PlotViewModel { Title = "Clean signal" },
-				new PlotViewModel { Title = "Noisy signal" },
-				new PlotViewModel { Title = "Correlation" },
-				new PlotViewModel { Title = "Statistics", MinimumY = 0.0, MaximumY = 1.0 },
+				new PlotViewModel(2) { Title = "Modulated signal" },
+				new PlotViewModel(4) { Title = "Impulse responses of filters" },
+				new PlotViewModel(4) { Title = "Filtered responses to signal" },
+				new PlotViewModel(1) { Title = "Statistics", MinimumY = 0.0 },
 			};
+
 			Plots.CollectionChanged += (_, _) => this.RaisePropertyChanged(nameof(Plots));
 		}
 
@@ -41,7 +42,6 @@ namespace MultipathSignal.Views
 				ModulationDepth = ModulationDepth
 			};
 			stat.StatusChanged += OnStatusChanged;
-			stat.PlotDataReady += OnPlotDataReady;
 
 			try { 
 				switch (SimulationMode) {
@@ -67,7 +67,7 @@ namespace MultipathSignal.Views
 						break;
 
 					case 2:     // Gather statistics
-						Plots[3].Points = new List<DataPoint>();
+						Plots[3].ReplacePointsOf(0, new List<DataPoint>());
 						double snr = SNRNoisy;
 						double snrMax = SNRNoisyMax + 0.5 * SNRNoisyStep;
 						double threshold = 0.5 / ModulationSpeed;
@@ -91,7 +91,7 @@ namespace MultipathSignal.Views
 								if (Math.Abs(results2[i] - actualDelays[i]) < threshold)
 									gotitCount++;
 
-							(Plots[3].Points as IList<DataPoint>)?.Add(new DataPoint(snr, (double)gotitCount / results2.Length));
+							Plots[3].PointsOf(0).Add(new DataPoint(snr, (double)gotitCount / results2.Length));
 							snr += SNRNoisyStep;
 						}
 						break;
@@ -107,24 +107,6 @@ namespace MultipathSignal.Views
 		public void StopProcess() => Utils.Cancellation.Cancel();
 
 		public void OnStatusChanged(string status) => Status = status;
-
-		public void OnPlotDataReady(IList<double> clearSignal, IList<double> signal, IList<double> correl)
-		{
-			Status = "Data was generated successfully. Plotting...";
-
-			Dispatcher.UIThread.InvokeAsync(() => {
-				Plots[0].Points = clearSignal.Plotify();
-				//	.Select((v, i) => new OxyPlot.DataPoint(i / Samplerate, v));
-
-				Plots[1].Points = signal.Plotify();
-				//	.Select((v, i) => new OxyPlot.DataPoint(i / Samplerate, v));
-
-				Plots[2].Points = correl.Plotify();
-				//	.Select((v, i) => new OxyPlot.DataPoint(i / Samplerate, v));
-			});
-
-			Status = "Procedure was completed. Ready.";
-		}
 
 		#region Modulation parameters
 

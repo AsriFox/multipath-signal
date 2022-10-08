@@ -31,6 +31,28 @@
       <Setter Property="Foreground" Value="{StaticResource ThemeForegroundBrush}" />
       <Setter Property="Margin" Value="0,-2" />
     </Style>
+    <Style Selector="TabStripItem">
+      <Setter Property="Height" Value="20" />
+      <Setter Property="Margin" Value="0" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Background="{TemplateBinding Background}"
+                  Height="{TemplateBinding Height}">
+            <ContentPresenter Content="{TemplateBinding Content}"
+                              HorizontalContentAlignment="Center" />
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="TabStripItem:selected">
+      <Setter Property="Background" Value="{DynamicResource ThemeAccentBrush4}" />
+    </Style>
+    <Style Selector="TabStripItem:pointerover">
+      <Setter Property="Background" Value="{DynamicResource ThemeAccentBrush3}" />
+    </Style>
+    <Style Selector="TabStripItem:selected:pointerover">
+      <Setter Property="Background" Value="{DynamicResource ThemeAccentBrush2}" />
+    </Style>
   </Window.Styles>
   
   <DockPanel>
@@ -223,20 +245,64 @@
         </Grid>
       </Expander>
     </WrapPanel>
-    
-    <Carousel Name="PlotsPanel" 
-              Grid.Row="0" 
-              SelectedIndex="{Binding #ToggleShowCorrel.IsChecked}">
-      
-      <UniformGrid Name="SignalPlots" Rows="2">
-        <local:PlotView DataContext="{Binding Plots[0]}" />
-        <local:PlotView DataContext="{Binding Plots[1]}" />
-      </UniformGrid>
-      
-      <UniformGrid Name="CorrelPlots" Rows="2">
-        <local:PlotView DataContext="{Binding Plots[2]}" />
-        <local:PlotView DataContext="{Binding Plots[3]}" />
-      </UniformGrid>
-    </Carousel>
+
+    <UniformGrid Columns="2">
+      <local:PlotView Name="PlotSignal"
+                      DataContext="{Binding Plots[0]}" />
+
+      <local:PlotView Name="PlotImpulseResponse"
+                      DataContext="{Binding Plots[1]}" />
+
+      <ScrollViewer>
+        <StackPanel Name="PanelSequences">
+
+        </StackPanel>
+      </ScrollViewer>
+
+      <local:PlotView Name="PlotResponse"
+                      DataContext="{Binding Plots[2]}" />
+
+      <DockPanel>
+        <TabStrip Name="TabControlParameters"
+                  SelectedIndex="0"
+                  DockPanel.Dock="Top">
+          <TabStrip.ItemsPanel>
+            <ItemsPanelTemplate>
+              <UniformGrid Rows="1" />
+            </ItemsPanelTemplate>
+          </TabStrip.ItemsPanel>
+
+          <TabStripItem Content="Sequence" />
+          <TabStripItem Content="Modulation" />
+          <TabStripItem Content="Research" />
+        </TabStrip>
+
+        <Carousel Name="PanelParameters"
+                  SelectedIndex="{Binding #TabControlParameters.SelectedIndex}">
+
+          <ScrollViewer>
+            <StackPanel Name="PanelSequenceParams">
+              
+            </StackPanel>
+          </ScrollViewer>
+
+          <ScrollViewer>
+            <StackPanel Name="PanelModulationParams">
+              
+            </StackPanel>
+          </ScrollViewer>
+
+          <ScrollViewer>
+            <StackPanel Name="PanelResearchParams">
+              
+            </StackPanel>
+          </ScrollViewer>
+
+        </Carousel>
+      </DockPanel>
+
+      <local:PlotView Name="PlotStatistics"
+                      DataContext="{Binding Plots[3]}" />
+    </UniformGrid>
   </DockPanel>
 </Window>

@@ -1,5 +1,8 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using Avalonia.Input.TextInput;
 using OxyPlot;
 using OxyPlot.Axes;
 using OxyPlot.Series;
@@ -9,19 +12,21 @@ namespace MultipathSignal.Views
 { 
 	public class PlotViewModel : ReactiveObject
 	{
+		public readonly static OxyColor[] SeriesColors = new[] { OxyColors.Blue, OxyColors.Red, OxyColors.Cyan, OxyColors.DarkGreen };
+
 		private string title = "Empty";
 		public string Title {
 			get => title;
 			set => this.RaiseAndSetIfChanged(ref title, value);
 		}
 
-		private ObservableCollection<DataPoint> points = new();
-		public System.Collections.Generic.IEnumerable<DataPoint> Points {
-			get => points;
-			set => this.RaiseAndSetIfChanged(ref points, 
-				value as ObservableCollection<DataPoint> 
-				?? new ObservableCollection<DataPoint>(value));
-		}
+		public ObservableCollection<LineSeries> Series { get; } = new();
+
+		//get => Series[];
+		//set => this.RaiseAndSetIfChanged(ref points, 
+		//	value as ObservableCollection<DataPoint> 
+		//	?? new ObservableCollection<DataPoint>(value));
+		
 
 		private double minimumY = double.NaN;
 		public double MinimumY {
@@ -38,21 +43,52 @@ namespace MultipathSignal.Views
 		public PlotViewModel()
 		{
 			this.PropertyChanged += OnPropertyChanged;
+			Series.CollectionChanged += OnCollectionChanged;
+		}
+
+		public PlotViewModel(int seriesCount) : base() 
+		{
+			for (int i = 0; i < seriesCount; i++)
+				this.CreateSeries();
 		}
 
 		public PlotModel Model { get; private set; } = new();
 
+		public void CreateSeries(IEnumerable<DataPoint>? points = null, OxyColor? color = null)
+		{
+			var s = new LineSeries { LineStyle = LineStyle.Solid };
+			try { 
+				s.Color = color ?? SeriesColors[Series.Count];
+			}
+			catch (IndexOutOfRangeException) {
+				s.Color = OxyColors.Black;
+			}
+			if (points is not null)
+				s.Points.AddRange(points);
+			Series.Add(s);
+		}
+
+		public IList<DataPoint> PointsOf(int i) => Series[i].Points;
+
+		public void ReplacePointsOf(int i, IEnumerable<DataPoint> points)
+		{
+			var s = new LineSeries {
+				LineStyle = Series[i].LineStyle,
+				Color = Series[i].Color
+			};
+			s.Points.AddRange(points);
+			Series[i] = s;
+		}
+
 		private void OnPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
 		{
 			switch (e.PropertyName) {
-				case nameof(Points):
+				case nameof(MinimumY):
+				case nameof(MaximumY):
 					break;
 				default:
 					return;
 			}
-
-			points.CollectionChanged += OnCollectionChanged;
-
 			Model = new PlotModel();
 			Model.Axes.Add(
 				new LinearAxis { 
@@ -61,45 +97,38 @@ namespace MultipathSignal.Views
 					Maximum = maximumY 
 				}
 			);
-
-			var s = new LineSeries { LineStyle = LineStyle.Solid, Color = OxyColors.Blue };
-			s.Points.AddRange(points);
-			Model.Series.Add(s);
-
+			foreach (var s in Series)
+				Model.Series.Add(s);
 			this.RaisePropertyChanged(nameof(Model));
 		}
 
 		private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
 		{
-			if (Model.Series.Count != 1) throw new System.IndexOutOfRangeException($"Unpredictable series collection: {Model.Series} is not 1 element");
-
-			var s = Model.Series[0] as LineSeries ?? throw new System.InvalidCastException($"Unexpected type: {Model.Series[0]} is not LineSeries");
-
-			switch (e.Action)
+			switch (e.Action) 
 			{
 				case NotifyCollectionChangedAction.Add:
-					if (e.NewItems?[0] is DataPoint @pa)
-						s.Points.Insert(e.NewStartingIndex, @pa);
+					if (e.NewItems?[0] is Series @sa)
+						Model.Series.Insert(e.NewStartingIndex, @sa);
 					break;
 
 				case NotifyCollectionChangedAction.Remove:
-					s.Points.RemoveAt(e.OldStartingIndex);
+					Model.Series.RemoveAt(e.OldStartingIndex);
 					break;
 
 				case NotifyCollectionChangedAction.Replace:
-					if (e.NewItems?[0] is DataPoint @pr)
-						s.Points[e.NewStartingIndex] = @pr;
+					if (e.NewItems?[0] is Series @sr)
+						Model.Series[e.NewStartingIndex] = @sr;
 					break;
 
 				case NotifyCollectionChangedAction.Move:
-					if (e.NewItems?[0] is DataPoint @pm) {
-						s.Points.RemoveAt(e.OldStartingIndex);
-						s.Points.Insert(e.NewStartingIndex, @pm);
+					if (e.NewItems?[0] is Series @sm) {
+						Model.Series.RemoveAt(e.OldStartingIndex);
+						Model.Series.Insert(e.NewStartingIndex, @sm);
 					}
 					break;
 
 				case NotifyCollectionChangedAction.Reset:
-					s.Points.Clear();
+					Model.Series.Clear();
 					break;
 			}
 		

@@ -1,6 +1,3 @@
-using Avalonia;
-using ReactiveUI;
-
 namespace MultipathSignal.Views
 {
 	public partial class PlotView : Avalonia.Controls.UserControl
@@ -10,7 +7,7 @@ namespace MultipathSignal.Views
 			InitializeComponent();
 
 			DataContextChanged += (s, _) => {
-				if (s is not StyledElement @se)
+				if (s is not Avalonia.StyledElement @se)
 					throw new System.InvalidOperationException();
 
 				if (@se.DataContext is PlotViewModel @pvm)
