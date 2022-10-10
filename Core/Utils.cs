@@ -1,20 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 using System.Threading;
-using System.Threading.Tasks;
+using MathNet.Numerics.Random;
 
 namespace MultipathSignal.Core
 {
 	internal static class Utils
 	{
-		public readonly static Random RNG = new();
+		public readonly static MersenneTwister RNG = new();
 		
 		public static IEnumerable<bool> RandomBitSeq(int length) {
 			var result = new bool[length];
 			for (int i = 0; i < length; i++)
-				result[i] = RNG.NextDouble() > 0.5;
+				result[i] = RNG.NextBoolean(); // .NextDouble() > 0.5;
 			return result;
 		}
 

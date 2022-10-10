@@ -54,14 +54,14 @@ namespace MultipathSignal.Core
 			double snrNoisy, 
 			bool output = false)
 		{
-			var gen = new SignalModulator {
+			SignalModulator gen = new() {
 				MainFrequency = MainFrequency,
 				BitRate = ModulationSpeed,
 				Method = ModulationType,
 				Depth = ModulationDepth
 			};
 
-			int bitDelay = (int) Math.Ceiling(receiveDelay / ModulationSpeed);
+			int bitDelay = (int) Math.Ceiling(receiveDelay * ModulationSpeed);
 			var task = gen.ModulateAsync(
 				Utils.RandomBitSeq(
 					bitDelay + BitSeqLength + Utils.RNG.Next(bitDelay, BitSeqLength)));
