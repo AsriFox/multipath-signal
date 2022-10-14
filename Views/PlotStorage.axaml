@@ -1,0 +1,20 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:MultipathSignal.Views"
+             x:Class="MultipathSignal.Views.PlotStorage">
+  <Design.DataContext>
+    <local:PlotStorageViewModel />
+  </Design.DataContext>
+
+  <Carousel SelectedIndex="{Binding ShowCorrelation, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type local:PlotStorage}}}">
+    <UniformGrid Name="SignalPlots" Rows="2">
+      <local:PlotView DataContext="{Binding Plots[0]}" />
+      <local:PlotView DataContext="{Binding Plots[1]}" />
+    </UniformGrid>
+
+    <UniformGrid Name="CorrelPlots" Rows="2">
+      <local:PlotView DataContext="{Binding Plots[2]}" />
+      <local:PlotView DataContext="{Binding Plots[3]}" />
+    </UniformGrid>
+  </Carousel>
+</UserControl>

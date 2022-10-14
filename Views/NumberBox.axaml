@@ -14,7 +14,9 @@
                      VerticalAlignment="Bottom"
                      DockPanel.Dock="Top"
                      TextWrapping="Wrap"
-                     Margin="8,2"/>
+                     IsVisible="{TemplateBinding Header}"
+                     Margin="8,0"
+                     Padding="2"/>
           <NumericUpDown FormatString="{TemplateBinding Format}"
                          Value="{TemplateBinding Value, Mode=TwoWay}"
                          Minimum="{TemplateBinding Minimum}"

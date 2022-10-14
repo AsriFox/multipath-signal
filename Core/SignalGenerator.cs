@@ -73,7 +73,7 @@ namespace MultipathSignal.Core
 
 			Func<bool, double> modfunc = Method switch 
 			{
-				Modulation.OOK => q => q ? 1.0 + Depth : 1.0 - Depth,
+				Modulation.OOK => q => q ? 1.0 : 1.0 - Depth,
 
 				Modulation.BPSK => q => {
 					if (q) Generator.Phase += Math.PI;
@@ -88,8 +88,9 @@ namespace MultipathSignal.Core
 
 			var signal = new List<double>();
 			foreach (var q in modul) {
+				double a = modfunc(q);
 				for (uint i = 0; i < BitLength * SignalGenerator.Samplerate; i++)
-					signal.Add(Generator.GetNextSample() * modfunc(q));
+					signal.Add(Generator.GetNextSample() * a);
 			}
 			return signal;
 		}

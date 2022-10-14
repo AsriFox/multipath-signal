@@ -7,9 +7,9 @@ namespace MultipathSignal.Views
 		/// </summary>
 		private MainWindowViewModel ViewModel {
 			get {
-				if (DataContext is not MainWindowViewModel @mvvm)
-					DataContext = @mvvm = new MainWindowViewModel();
-				return @mvvm;
+				if (DataContext is not MainWindowViewModel @mwvm)
+					DataContext = @mwvm = new MainWindowViewModel();
+				return @mwvm;
 			}
 		}
 

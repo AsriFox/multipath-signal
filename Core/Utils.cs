@@ -17,7 +17,28 @@ namespace MultipathSignal.Core
 			return result;
 		}
 
-		public const int MaxPointsCount = 80000;
+        public static IList<double> ApplyNoise(IList<double> signal, double snr)
+        {
+            if (signal.Count <= 0)
+                return Array.Empty<double>();
+
+            MathNet.Numerics.Distributions.Normal rand = new(new MersenneTwister(true));
+            var noise = new double[signal.Count];
+            double energyNoise = 0.0, energySignal = 0.0;
+            for (int i = 0; i < signal.Count; i++)
+            {
+                noise[i] = rand.Sample();
+                energyNoise += noise[i] * noise[i];
+                energySignal += signal[i] * signal[i];
+            }
+
+            double noiseMod = Math.Sqrt(energySignal / energyNoise / snr);
+            for (int i = 0; i < signal.Count; i++)
+                noise[i] = signal[i] + noise[i] * noiseMod;
+            return noise;
+        }
+
+        public const int MaxPointsCount = 80000;
 
 		public static IEnumerable<OxyPlot.DataPoint> Plotify(this IList<double> values) 
 		{

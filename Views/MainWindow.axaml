@@ -78,6 +78,38 @@
                     Grid.Column="1"
                     PointerEnter="PointerMoveFocus" />
     </Grid>
+
+	<DockPanel Name="SliderBar" 
+             IsVisible="{Binding #SimVariantFull.IsSelected}"
+			       DockPanel.Dock="Bottom">
+    
+      <local:NumberBox Header="" 
+                       Format="{}{0:F2}"
+                       Value="{Binding SNRShown, Mode=TwoWay}"
+                       Minimum="{Binding SNRNoisy}"
+                       Maximum="{Binding SNRNoisyMax}"
+                       Step="{Binding SNRNoisyStep}"
+                       PointerEnter="PointerMoveFocus"
+                       IsEnabled="True"
+                       Margin="0" 
+                       DockPanel.Dock="Right" />
+		
+      <TextBlock Text="Show plots with this SNR, dB:"
+                 TextWrapping="Wrap"
+                 Margin="8,0"
+                 VerticalAlignment="Center" 
+                 DockPanel.Dock="Right" />
+    
+      <Slider Value="{Binding SNRShown, Mode=TwoWay}"
+              Minimum="{Binding SNRNoisy}"
+              Maximum="{Binding SNRNoisyMax}"
+              SmallChange="{Binding SNRNoisyStep}"
+              LargeChange="{Binding SNRNoisyStep}"
+              TickPlacement="TopLeft"
+              TickFrequency="1"
+              IsSnapToTickEnabled="True"
+              VerticalAlignment="Center" />
+	</DockPanel>
     
     <WrapPanel Name="ParamsBlock" DockPanel.Dock="Bottom">
       
@@ -224,19 +256,8 @@
       </Expander>
     </WrapPanel>
     
-    <Carousel Name="PlotsPanel" 
-              Grid.Row="0" 
-              SelectedIndex="{Binding #ToggleShowCorrel.IsChecked}">
-      
-      <UniformGrid Name="SignalPlots" Rows="2">
-        <local:PlotView DataContext="{Binding Plots[0]}" />
-        <local:PlotView DataContext="{Binding Plots[1]}" />
-      </UniformGrid>
-      
-      <UniformGrid Name="CorrelPlots" Rows="2">
-        <local:PlotView DataContext="{Binding Plots[2]}" />
-        <local:PlotView DataContext="{Binding Plots[3]}" />
-      </UniformGrid>
-    </Carousel>
+    <local:PlotStorage Name="PlotsPanel" 
+                       DataContext="{Binding PlotStorage}"
+                       ShowCorrelation="{Binding #ToggleShowCorrel.IsChecked}" />
   </DockPanel>
 </Window>

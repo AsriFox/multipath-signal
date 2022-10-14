@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Controls.Templates;
 using Avalonia.Threading;
 using MultipathSignal.Core;
 using OxyPlot;
@@ -14,25 +15,15 @@ namespace MultipathSignal.Views
 {
 	internal class MainWindowViewModel : ReactiveObject
 	{
+		public PlotStorageViewModel PlotStorage { get; private set; } = new();
+
 		/// <summary>
-		/// Collection of view models for PlotView elements.
+		/// Click event handler for "Launch simulation" button
 		/// </summary>
-		public System.Collections.ObjectModel.ObservableCollection<PlotViewModel> Plots { get; private set; } = new();
-
-		public MainWindowViewModel()
-		{
-			Plots = new() {
-				new PlotViewModel { Title = "Clean signal" },
-				new PlotViewModel { Title = "Noisy signal" },
-				new PlotViewModel { Title = "Correlation" },
-				new PlotViewModel { Title = "Statistics", MinimumY = 0.0, MaximumY = 1.0 },
-			};
-			Plots.CollectionChanged += (_, _) => this.RaisePropertyChanged(nameof(Plots));
-		}
-
 		public async void Process()
 		{
 			EditMode = false;
+			PlotStorage.Clear();
 			SignalGenerator.Samplerate = Samplerate;
 			Statistics stat = new() {
 				MainFrequency = MainFrequency,
@@ -46,52 +37,23 @@ namespace MultipathSignal.Views
 			try { 
 				switch (SimulationMode) {
 					case 0:     // Single test
-						Status = "Processing one signal...";
-						PredictedDelay = await stat.FindPredictedDelayAsync(ReceiveDelay, SNRClean, SNRNoisy, true);
+						PredictedDelay = await stat.ProcessSingle(ReceiveDelay, SNRClean, SNRNoisy);
 						break;
 
 					case 1:     // Multiple tests
-						Status = "Processing signals...";
-						var stopw = new Stopwatch();
-						stopw.Start();
-						var tasks = Enumerable.Range(0, TestsRepeatCount)
-											.Select(_ => stat.FindPredictedDelayAsync(ReceiveDelay, SNRClean, SNRNoisy))
-											.ToList();
-						tasks.Add(stat.FindPredictedDelayAsync(ReceiveDelay, SNRClean, SNRNoisy, true));
-
-						var results = await Task.WhenAll(tasks);
-						PredictedDelay = results.Sum() / results.Length;
-						
-						stopw.Stop();
-						Status = $"{TestsRepeatCount} tasks were completed in {stopw.Elapsed.TotalSeconds:F2} s. Ready.";
+						PredictedDelay = await stat.ProcessMultiple(ReceiveDelay, SNRClean, SNRNoisy, TestsRepeatCount);
 						break;
 
 					case 2:     // Gather statistics
-						Plots[3].Points = new List<DataPoint>();
+						PredictedDelay = double.NaN;
+						PlotStorage.Plots[3].Points = new List<DataPoint>();
 						double snr = SNRNoisy;
 						double snrMax = SNRNoisyMax + 0.5 * SNRNoisyStep;
-						double threshold = 0.5 / ModulationSpeed;
 						while (snr < snrMax) {
 							if (Utils.Cancellation.IsCancellationRequested) break;
-
-							Status = $"Processing signals with SNR = {snr:F2} dB";
-							var actualDelays = new List<double>();
-							var tasks2 = new List<Task<double>>();
-							for (int i = 0; i < TestsRepeatCount; i++) {
-								double delay = ReceiveDelay * 2.0 * Utils.RNG.NextDouble();
-								actualDelays.Add(delay);
-								tasks2.Add(stat.FindPredictedDelayAsync(delay, SNRClean, snr));
-							}
-							actualDelays.Add(ReceiveDelay * 2.0 * Utils.RNG.NextDouble());
-							tasks2.Add(stat.FindPredictedDelayAsync(actualDelays.Last(), SNRClean, snr, true));
-
-							var results2 = await Task.WhenAll(tasks2);
-							int gotitCount = 0;
-							for (int i = 0; i < results2.Length; i++)
-								if (Math.Abs(results2[i] - actualDelays[i]) < threshold)
-									gotitCount++;
-
-							(Plots[3].Points as IList<DataPoint>)?.Add(new DataPoint(snr, (double)gotitCount / results2.Length));
+							double gotitPercent = await stat.ProcessStatistic(ReceiveDelay, SNRClean, snr, TestsRepeatCount);
+							(PlotStorage.Plots[3].Points as IList<DataPoint>)?.Add(new DataPoint(snr, gotitPercent));
+							SNRShown = snr;
 							snr += SNRNoisyStep;
 						}
 						break;
@@ -104,6 +66,9 @@ namespace MultipathSignal.Views
 			EditMode = true;
 		}
 
+		/// <summary>
+		/// Click event handler for "Stop simulation" button
+		/// </summary>
 		public void StopProcess() => Utils.Cancellation.Cancel();
 
 		public void OnStatusChanged(string status) => Status = status;
@@ -111,56 +76,97 @@ namespace MultipathSignal.Views
 		public void OnPlotDataReady(IList<double> clearSignal, IList<double> signal, IList<double> correl)
 		{
 			Status = "Data was generated successfully. Plotting...";
-
-			Dispatcher.UIThread.InvokeAsync(() => {
-				Plots[0].Points = clearSignal.Plotify();
-				//	.Select((v, i) => new OxyPlot.DataPoint(i / Samplerate, v));
-
-				Plots[1].Points = signal.Plotify();
-				//	.Select((v, i) => new OxyPlot.DataPoint(i / Samplerate, v));
-
-				Plots[2].Points = correl.Plotify();
-				//	.Select((v, i) => new OxyPlot.DataPoint(i / Samplerate, v));
-			});
-
+			PlotStorage.OnPlotDataReady(clearSignal, signal, correl);
 			Status = "Procedure was completed. Ready.";
 		}
 
 		#region Modulation parameters
 
-		public Core.SignalModulator.Modulation ModulationType { get; set; } = Core.SignalModulator.Modulation.OOK;
+		private SignalModulator.Modulation modulationType = SignalModulator.Modulation.OOK;
+        public SignalModulator.Modulation ModulationType {
+            get => modulationType;
+            set => this.RaiseAndSetIfChanged(ref modulationType, value);
+        }
 
-		public double ModulationDepth { get; set; } = 0.8;
+        private double modulationDepth = 0.4;
+		public double ModulationDepth {
+			get => modulationDepth;
+			set => this.RaiseAndSetIfChanged(ref modulationDepth, value);
+		}
+		
+		private double modulationSpeed = 100;
+		public double ModulationSpeed {
+			get => modulationSpeed;
+			set => this.RaiseAndSetIfChanged(ref modulationSpeed, value);
+		}
 
-		public double ModulationSpeed { get; set; } = 100.0;
+		private int bitSeqLength = 64;
+		public int BitSeqLength {
+			get => bitSeqLength;
+			set => this.RaiseAndSetIfChanged(ref bitSeqLength, value);
+		}
 
-		public int BitSeqLength { get; set; } = 64;
+		private double mainFrequency = 1000.0;
+		public double MainFrequency {
+			get => mainFrequency;
+			set => this.RaiseAndSetIfChanged(ref mainFrequency, value);
+		}
 
-		public double MainFrequency { get; set; } = 1000.0;
-
-		public double Samplerate { get; set; } = 10000.0;
+		private double samplerate = 10000.0;
+		public double Samplerate {
+			get => samplerate;
+			set => this.RaiseAndSetIfChanged(ref samplerate, value);
+		}
 
 		#endregion
 
 		#region Simulation parameters
 
-		public int SimulationMode { get; set; } = 1;
+		private int simulationMode = 1;
+        public int SimulationMode {
+            get => simulationMode;
+            set => this.RaiseAndSetIfChanged(ref simulationMode, value);
+        }
 
-		public double ReceiveDelay { get; set; } = 0.08;
+        private double receiveDelay = 0.08;
+        public double ReceiveDelay {
+            get => receiveDelay;
+            set => this.RaiseAndSetIfChanged(ref receiveDelay, value);
+        }
 
-		public double SNRClean { get; set; } = 10.0;
+        private double snrClean = 10.0;
+        public double SNRClean {
+            get => snrClean;
+            set => this.RaiseAndSetIfChanged(ref snrClean, value);
+        }
 
-		public double SNRNoisy { get; set; } = -10.0;
+        private double snrNoisy = -10.0;
+        public double SNRNoisy {
+            get => snrNoisy;
+            set => this.RaiseAndSetIfChanged(ref snrNoisy, value);
+        }
 
-		public double SNRNoisyMax { get; set; } = 10.0;
+        private double snrNoisyMax = 10.0;
+        public double SNRNoisyMax {
+            get => snrNoisyMax;
+            set => this.RaiseAndSetIfChanged(ref snrNoisyMax, value);
+        }
 
-		public double SNRNoisyStep { get; set; } = 1.0;
+        private double snrNoisyStep = 1.0;
+        public double SNRNoisyStep {
+            get => snrNoisyStep;
+            set => this.RaiseAndSetIfChanged(ref snrNoisyStep, value);
+        }
 
-		public int TestsRepeatCount { get; set; } = 1000;
+        private int testsRepeatCount = 1000;
+        public int TestsRepeatCount {
+            get => testsRepeatCount;
+            set => this.RaiseAndSetIfChanged(ref testsRepeatCount, value);
+        }
 
 		#endregion
 
-		private double predictedDelay = double.NaN;
+        private double predictedDelay = double.NaN;
 		public double PredictedDelay {
 			get => predictedDelay; 
 			set => this.RaiseAndSetIfChanged(ref predictedDelay, value); 
@@ -176,6 +182,15 @@ namespace MultipathSignal.Views
 		public bool EditMode { 
 			get => editMode;
 			set => this.RaiseAndSetIfChanged(ref editMode, value);
+		}
+
+		private double snrShown = 0.0;
+		public double SNRShown {
+			get => snrShown;
+			set {
+				this.RaiseAndSetIfChanged(ref snrShown, value);
+				PlotStorage.Select((int)((snrShown - SNRNoisy) / SNRNoisyStep));
+			}
 		}
 	}
 }
