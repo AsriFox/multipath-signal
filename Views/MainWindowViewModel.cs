@@ -14,22 +14,23 @@ namespace MultipathSignal.Views
 {
 	internal class MainWindowViewModel : ReactiveObject
 	{
-		/// <summary>
-		/// Collection of view models for PlotView elements.
-		/// </summary>
-		public System.Collections.ObjectModel.ObservableCollection<PlotViewModel> Plots { get; private set; } = new();
 
-		public MainWindowViewModel()
+        /// <summary>
+        /// Collection of view models for PlotView elements.
+        /// </summary>
+        private System.Collections.ObjectModel.ObservableCollection<PlotViewModel> Plots { get; set; } = new();
+
+        public MainWindowViewModel()
 		{
-			Plots = new() {
-				new PlotViewModel(2) { Title = "Modulated signal" },
-				new PlotViewModel(4) { Title = "Impulse responses of filters" },
-				new PlotViewModel(4) { Title = "Filtered responses to signal" },
-				new PlotViewModel(1) { Title = "Statistics", MinimumY = 0.0 },
-			};
+            Plots = new() {
+                new PlotViewModel(2) { Title = "Modulated signal" },
+                new PlotViewModel(4) { Title = "Impulse responses of filters" },
+                new PlotViewModel(4) { Title = "Filtered responses to signal" },
+                new PlotViewModel(1) { Title = "Statistics", MinimumY = 0.0 },
+            };
 
-			Plots.CollectionChanged += (_, _) => this.RaisePropertyChanged(nameof(Plots));
-		}
+            Plots.CollectionChanged += (_, _) => this.RaisePropertyChanged(nameof(Plots));
+        }
 
 		public async void Process()
 		{

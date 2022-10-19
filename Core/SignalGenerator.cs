@@ -80,7 +80,7 @@ namespace MultipathSignal.Core
 					return 1.0;
 				},
 				Modulation.FT => q => {
-					Generator.Frequency = MainFrequency * (q ? 1.0 + Depth : 1.0 - Depth);
+					Generator.Frequency = MainFrequency * (q ? 1.0 : 1.0 - Depth);
 					return 1.0;
 				},
 				_ => throw new NotImplementedException(),
@@ -88,8 +88,9 @@ namespace MultipathSignal.Core
 
 			var signal = new List<double>();
 			foreach (var q in modul) {
-				for (uint i = 0; i < BitLength * SignalGenerator.Samplerate; i++)
-					signal.Add(Generator.GetNextSample() * modfunc(q));
+				double a = modfunc(q);
+                for (uint i = 0; i < BitLength * SignalGenerator.Samplerate; i++)
+					signal.Add(Generator.GetNextSample() * a);
 			}
 			return signal;
 		}

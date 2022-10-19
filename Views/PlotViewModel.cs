@@ -14,7 +14,9 @@ namespace MultipathSignal.Views
 	{
 		public readonly static OxyColor[] SeriesColors = new[] { OxyColors.Blue, OxyColors.Red, OxyColors.Cyan, OxyColors.DarkGreen };
 
-		private string title = "Empty";
+        #region Properties
+
+        private string title = "Empty";
 		public string Title {
 			get => title;
 			set => this.RaiseAndSetIfChanged(ref title, value);
@@ -40,7 +42,9 @@ namespace MultipathSignal.Views
 			set => this.RaiseAndSetIfChanged(ref maximumY, value);
 		}
 
-		public PlotViewModel()
+        #endregion
+
+        public PlotViewModel()
 		{
 			this.PropertyChanged += OnPropertyChanged;
 			Series.CollectionChanged += OnCollectionChanged;
@@ -54,7 +58,9 @@ namespace MultipathSignal.Views
 
 		public PlotModel Model { get; private set; } = new();
 
-		public void CreateSeries(IEnumerable<DataPoint>? points = null, OxyColor? color = null)
+        #region Series handling
+
+        public void CreateSeries(IEnumerable<DataPoint>? points = null, OxyColor? color = null)
 		{
 			var s = new LineSeries { LineStyle = LineStyle.Solid };
 			try { 
@@ -78,9 +84,54 @@ namespace MultipathSignal.Views
 			};
 			s.Points.AddRange(points);
 			Series[i] = s;
+        }
+
+        public void ReplacePointsWith(params IEnumerable<DataPoint>[] points) 
+		{
+            for (int i = 0; i < points.Length && i < Series.Count; i++)
+                ReplacePointsOf(i, points[i]);
+        }
+
+        #endregion
+
+        #region Points history
+
+        private readonly List<IEnumerable<DataPoint>[]> history = new();
+
+        public void AddDataPoint(params IEnumerable<DataPoint>[] points)
+		{
+			history.Add(points);
+			SelectDataPoint(history.Count - 1);
+        }
+
+        private int selectedIndex = -1;
+		public int SelectedIndex {
+			get => selectedIndex;
+			set => SelectDataPoint(value);
 		}
 
-		private void OnPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+		public void SelectDataPoint(int t)
+		{
+			if (t >= history.Count || t < 0) return;
+			if (t == selectedIndex) return;
+			selectedIndex = t;
+			ReplacePointsWith(history[t]);
+			this.RaisePropertyChanged(nameof(Model));
+		}
+
+		public void Clear()
+		{
+			history.Clear();
+			foreach (var s in Series)
+				s.Points.Clear();
+			selectedIndex = -1;
+		}
+
+        #endregion
+
+        #region Event handlers
+
+        private void OnPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
 		{
 			switch (e.PropertyName) {
 				case nameof(MinimumY):
@@ -134,5 +185,7 @@ namespace MultipathSignal.Views
 		
 			Model.InvalidatePlot(true);
 		}
-	}
+
+        #endregion
+    }
 }

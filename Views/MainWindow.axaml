@@ -246,6 +246,38 @@
       </Expander>
     </WrapPanel>
 
+    <DockPanel Name="SliderBar"
+             IsVisible="{Binding #SimVariantFull.IsSelected}"
+			       DockPanel.Dock="Bottom">
+
+      <local:NumberBox Header=""
+                       Format="{}{0:F2}"
+                       Value="{Binding SNRShown, Mode=TwoWay}"
+                       Minimum="{Binding SNRNoisy}"
+                       Maximum="{Binding SNRNoisyMax}"
+                       Step="{Binding SNRNoisyStep}"
+                       PointerEnter="PointerMoveFocus"
+                       IsEnabled="True"
+                       Margin="0"
+                       DockPanel.Dock="Right" />
+
+      <TextBlock Text="Show plots with this SNR, dB:"
+                 TextWrapping="Wrap"
+                 Margin="8,0"
+                 VerticalAlignment="Center"
+                 DockPanel.Dock="Right" />
+
+      <Slider Value="{Binding SNRShown, Mode=TwoWay}"
+              Minimum="{Binding SNRNoisy}"
+              Maximum="{Binding SNRNoisyMax}"
+              SmallChange="{Binding SNRNoisyStep}"
+              LargeChange="{Binding SNRNoisyStep}"
+              TickPlacement="TopLeft"
+              TickFrequency="1"
+              IsSnapToTickEnabled="True"
+              VerticalAlignment="Center" />
+    </DockPanel>
+
     <UniformGrid Columns="2">
       <local:PlotView Name="PlotSignal"
                       DataContext="{Binding Plots[0]}" />
