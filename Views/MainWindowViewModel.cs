@@ -15,7 +15,23 @@ namespace MultipathSignal.Views
 {
 	internal class MainWindowViewModel : ReactiveObject
 	{
-		public PlotStorageViewModel PlotStorage { get; private set; } = new();
+		// public PlotStorageViewModel PlotStorage { get; private set; } = new();
+
+		public System.Collections.ObjectModel.ObservableCollection<PlotViewModel> Plots { get; }
+
+		public MainWindowViewModel()
+		{
+			Plots = new() {
+				new PlotViewModel() { Title = "Signals" },
+				new PlotViewModel() { Title = "Correlation", MinimumY = 0.0 },
+				new PlotViewModel() { Title = "Statistics", MinimumY = 0.0, MaximumY = 1.0 },
+			};
+			Plots[0].CreateSeries(color: OxyColors.LightBlue);
+			Plots[0].CreateSeries(color: OxyColors.OrangeRed);
+			Plots[1].CreateSeries();
+			Plots[2].CreateSeries();
+			Plots.CollectionChanged += (_, _) => this.RaisePropertyChanged(nameof(Plots));
+		}
 
 		/// <summary>
 		/// Click event handler for "Launch simulation" button
@@ -23,36 +39,40 @@ namespace MultipathSignal.Views
 		public async void Process()
 		{
 			EditMode = false;
-			PlotStorage.Clear();
 			SignalGenerator.Samplerate = Samplerate;
 			Statistics stat = new() {
 				MainFrequency = MainFrequency,
 				ModulationSpeed = ModulationSpeed,
 				ModulationType = ModulationType,
-				ModulationDepth = ModulationDepth
+				ModulationDepth = ModulationDepth,
+				BitSeqLength = BitSeqLength
 			};
 			stat.StatusChanged += OnStatusChanged;
 			stat.PlotDataReady += OnPlotDataReady;
 
-			try { 
+			try {
+				double predictedDelay;
 				switch (SimulationMode) {
 					case 0:     // Single test
-						PredictedDelay = await stat.ProcessSingle(ReceiveDelay, SNRClean, SNRNoisy);
+						predictedDelay = await stat.ProcessSingle(ReceiveDelay, SNRClean, SNRNoisy, useFft);
+						Status = $"Predicted delay: {predictedDelay:F4}s";
 						break;
 
 					case 1:     // Multiple tests
-						PredictedDelay = await stat.ProcessMultiple(ReceiveDelay, SNRClean, SNRNoisy, TestsRepeatCount);
-						break;
+						predictedDelay = await stat.ProcessMultiple(ReceiveDelay, SNRClean, SNRNoisy, useFft, TestsRepeatCount);
+                        Status += $"Average predicted delay: {predictedDelay:F4}s";
+                        break;
 
 					case 2:     // Gather statistics
-						PredictedDelay = double.NaN;
-						PlotStorage.Plots[3].Points = new List<DataPoint>();
+						Plots[0].Clear();
+						Plots[1].Clear();
+						Plots[2].Clear();
 						double snr = SNRNoisy;
 						double snrMax = SNRNoisyMax + 0.5 * SNRNoisyStep;
 						while (snr < snrMax) {
 							if (Utils.Cancellation.IsCancellationRequested) break;
-							double gotitPercent = await stat.ProcessStatistic(ReceiveDelay, SNRClean, snr, TestsRepeatCount);
-							(PlotStorage.Plots[3].Points as IList<DataPoint>)?.Add(new DataPoint(snr, gotitPercent));
+							double gotitPercent = await stat.ProcessStatistic(ReceiveDelay, SNRClean, snr, useFft, TestsRepeatCount);
+							Plots[2].AppendTo(0, new DataPoint(snr, gotitPercent));
 							SNRShown = snr;
 							snr += SNRNoisyStep;
 						}
@@ -73,10 +93,14 @@ namespace MultipathSignal.Views
 
 		public void OnStatusChanged(string status) => Status = status;
 
-		public void OnPlotDataReady(IList<double> clearSignal, IList<double> signal, IList<double> correl)
+		public void OnPlotDataReady(double delay, IList<double>[] plots)
 		{
 			Status = "Data was generated successfully. Plotting...";
-			PlotStorage.OnPlotDataReady(clearSignal, signal, correl);
+			Plots[0].AddDataPoint(
+				plots[1].Plotify(), 
+				plots[0].Plotify(delay)
+			);
+			Plots[1].AddDataPoint(plots[2].Plotify());
 			Status = "Procedure was completed. Ready.";
 		}
 
@@ -166,12 +190,6 @@ namespace MultipathSignal.Views
 
 		#endregion
 
-        private double predictedDelay = double.NaN;
-		public double PredictedDelay {
-			get => predictedDelay; 
-			set => this.RaiseAndSetIfChanged(ref predictedDelay, value); 
-		}
-
 		private string status = "Ready.";
 		public string Status { 
 			get => status; 
@@ -184,12 +202,20 @@ namespace MultipathSignal.Views
 			set => this.RaiseAndSetIfChanged(ref editMode, value);
 		}
 
+		private bool useFft = true;
+		public bool UseFFT {
+			get => useFft;
+			set => this.RaiseAndSetIfChanged(ref useFft, value);
+		}
+
 		private double snrShown = 0.0;
 		public double SNRShown {
 			get => snrShown;
 			set {
 				this.RaiseAndSetIfChanged(ref snrShown, value);
-				PlotStorage.Select((int)((snrShown - SNRNoisy) / SNRNoisyStep));
+				int sel = (int)((snrShown - SNRNoisy) / SNRNoisyStep);
+				foreach (var plot in Plots)
+					plot.SelectDataPoint(sel);
 			}
 		}
 	}

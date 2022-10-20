@@ -40,10 +40,10 @@ namespace MultipathSignal.Core
 
         public const int MaxPointsCount = 80000;
 
-		public static IEnumerable<OxyPlot.DataPoint> Plotify(this IList<double> values) 
+		public static IEnumerable<OxyPlot.DataPoint> Plotify(this IList<double> values, double startX = 0.0) 
 		{
 			if (values.Count <= MaxPointsCount)
-				return values.Select((v, i) => new OxyPlot.DataPoint(i / SignalGenerator.Samplerate, v));
+				return values.Select((v, i) => new OxyPlot.DataPoint(startX + i / SignalGenerator.Samplerate, v));
 
 			int div = 2;
 			while (values.Count / div > MaxPointsCount)

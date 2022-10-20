@@ -19,34 +19,34 @@ namespace MultipathSignal.Core
         public event Action<string>? StatusChanged;
 		protected internal void RaiseStatusChanged(string status) => StatusChanged?.Invoke(status);
 
-        public event Action<IList<double>, IList<double>, IList<double>>? PlotDataReady;
-		protected internal void RaisePlotDataReady(IList<double> data1, IList<double> data2, IList<double> data3) => PlotDataReady?.Invoke(data1, data2, data3);
+        public event Action<double, IList<double>[]>? PlotDataReady;
+		protected internal void RaisePlotDataReady(double delay, params IList<double>[] plots) => PlotDataReady?.Invoke(delay, plots);
 
-		public Task<double> ProcessSingle(double delay, double snrClean, double snrNoisy)
+		public Task<double> ProcessSingle(double delay, double snrClean, double snrNoisy, bool useFft)
 		{
             StatusChanged?.Invoke("Processing one signal...");
-            return this.FindPredictedDelay(delay, snrClean, snrNoisy, true);
+            return this.FindPredictedDelay(delay, snrClean, snrNoisy, useFft, true);
         }
 
-		public async Task<double> ProcessMultiple(double delay, double snrClean, double snrNoisy, int testsRepeatCount)
+		public async Task<double> ProcessMultiple(double delay, double snrClean, double snrNoisy, bool useFft, int testsRepeatCount)
 		{
             StatusChanged?.Invoke("Processing signals...");
             var stopw = new Stopwatch();
             stopw.Start();
             var tasks = Enumerable.Range(0, testsRepeatCount)
-                                  .Select(_ => this.FindPredictedDelay(delay, snrClean, snrNoisy))
+                                  .Select(_ => this.FindPredictedDelay(delay, snrClean, snrNoisy, useFft))
                                   .ToList();
-            tasks.Add(this.FindPredictedDelay(delay, snrClean, snrNoisy, true));
+            tasks.Add(this.FindPredictedDelay(delay, snrClean, snrNoisy, useFft, true));
 
             var results = await Task.WhenAll(tasks);
             double predictedDelay = results.Sum() / results.Length;
 
             stopw.Stop();
-            StatusChanged?.Invoke($"{testsRepeatCount} tasks were completed in {stopw.Elapsed.TotalSeconds:F2} s. Ready.");
+            StatusChanged?.Invoke($"{testsRepeatCount} tasks were completed in {stopw.Elapsed.TotalSeconds:F2} s. ");
             return predictedDelay;
         }
 
-        public async Task<double> ProcessStatistic(double delayBase, double snrClean, double snrNoisy, int testsRepeatCount)
+        public async Task<double> ProcessStatistic(double delayBase, double snrClean, double snrNoisy, bool useFft, int testsRepeatCount)
         {
             StatusChanged?.Invoke($"Processing signals with SNR = {snrNoisy:F2} dB");
             var actualDelays = new List<double>();
@@ -54,10 +54,10 @@ namespace MultipathSignal.Core
             for (int i = 0; i < testsRepeatCount; i++) {
                 double delay = delayBase * 2.0 * Utils.RNG.NextDouble();
                 actualDelays.Add(delay);
-                tasks2.Add(this.FindPredictedDelay(delay, snrClean, snrNoisy));
+                tasks2.Add(this.FindPredictedDelay(delay, snrClean, snrNoisy, useFft));
             }
             actualDelays.Add(delayBase * 2.0 * Utils.RNG.NextDouble());
-            tasks2.Add(this.FindPredictedDelay(actualDelays.Last(), snrClean, snrNoisy, true));
+            tasks2.Add(this.FindPredictedDelay(actualDelays.Last(), snrClean, snrNoisy, useFft, true));
 
             var results2 = await Task.WhenAll(tasks2);
             double threshold = 0.5 / ModulationSpeed;

@@ -35,53 +35,36 @@
   
   <DockPanel>
     <Grid Name="StatusBar" 
-          ColumnDefinitions="0.5*, 0.5*, 2*" 
+          ColumnDefinitions="2*,*,6*"
           DockPanel.Dock="Bottom">
       
-      <TextBlock Text="Predicted delay:"
-                 VerticalAlignment="Center"
-                 TextWrapping="Wrap"
-                 Grid.Column="0"
-                 Margin="4" />
-      <TextBox Text="{Binding PredictedDelay, Mode=OneWay}"
-               VerticalContentAlignment="Center"
-               BorderBrush="Transparent"
-               IsReadOnly="True"
-               Grid.Column="1"
-               FontSize="12"
-               Margin="2"/>
-      <TextBlock Text="{Binding Status, Mode=OneWay}"
-                 VerticalAlignment="Center"
-                 TextWrapping="Wrap"
-                 Grid.Column="2" 
-                 Margin="4,0" />
-    </Grid>
-    
-    <Grid Name="ActionButtons" 
-          DockPanel.Dock="Bottom" 
-          ColumnDefinitions="*,*">
-      
-      <Button Content="Launch the simulation" 
-              Command="{Binding Process}" 
+      <Button Content="Launch the simulation"
+              Command="{Binding Process}"
               Grid.Column="0"
               IsVisible="{Binding EditMode}"
               PointerEnter="PointerMoveFocus" />
-
+      
       <Button Content="Stop the simulation"
               Command="{Binding StopProcess}"
               Grid.Column="0"
               IsVisible="{Binding !EditMode}"
               PointerEnter="PointerMoveFocus" />
-              
-      <ToggleButton Name="ToggleShowCorrel" 
-                    Content="Show correlation"
+      
+      <ToggleButton Content="Use FFT"
+                    IsChecked="{Binding UseFFT, Mode=TwoWay}"
                     Grid.Column="1"
                     PointerEnter="PointerMoveFocus" />
+      
+      <TextBlock Text="{Binding Status, Mode=OneWay}"
+                 VerticalAlignment="Center"
+                 TextWrapping="Wrap"
+                 Grid.Column="2" 
+                 Margin="8,0" />
     </Grid>
 
-	<DockPanel Name="SliderBar" 
-             IsVisible="{Binding #SimVariantFull.IsSelected}"
-			       DockPanel.Dock="Bottom">
+	  <DockPanel Name="SliderBar" 
+               IsVisible="{Binding #SimVariantFull.IsSelected}"
+			         DockPanel.Dock="Bottom">
     
       <local:NumberBox Header="" 
                        Format="{}{0:F2}"
@@ -109,7 +92,7 @@
               TickFrequency="1"
               IsSnapToTickEnabled="True"
               VerticalAlignment="Center" />
-	</DockPanel>
+	  </DockPanel>
     
     <WrapPanel Name="ParamsBlock" DockPanel.Dock="Bottom">
       
@@ -255,9 +238,15 @@
         </Grid>
       </Expander>
     </WrapPanel>
-    
-    <local:PlotStorage Name="PlotsPanel" 
-                       DataContext="{Binding PlotStorage}"
-                       ShowCorrelation="{Binding #ToggleShowCorrel.IsChecked}" />
+
+    <UniformGrid Name="PlotsPanel" Columns="1">
+      <local:PlotView Name="PlotSignal"
+                      DataContext="{Binding Plots[0]}" />
+      <local:PlotView Name="PlotCorrel"
+                      DataContext="{Binding Plots[1]}" />
+      <local:PlotView Name="PlotStats"
+                      DataContext="{Binding Plots[2]}"
+                      IsVisible="{Binding #SimVariantFull.IsSelected}"/>
+    </UniformGrid>
   </DockPanel>
 </Window>

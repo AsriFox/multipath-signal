@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using static FftSharp.Transform;
 
 namespace MultipathSignal.Core
 {
@@ -39,11 +39,44 @@ namespace MultipathSignal.Core
                 TaskCreationOptions.None,
                 TaskScheduler.Default);
 
+        public static IList<double> CalcByFFT(IList<double> bigarr, IList<double> smolar)
+        {
+            int bigsize = 1;
+            while (bigsize < bigarr.Count + smolar.Count) bigsize <<= 1;
+            var bigarr2 = new double[bigsize];
+            bigarr.CopyTo(bigarr2, 0);
+            var smolar2 = new double[bigsize];
+            for (int i = 0; i < smolar.Count; i++)
+                smolar2[i] = smolar[smolar.Count - 1 - i];
+
+            var bigfft = FFT(bigarr2);
+            var smolft = FFT(smolar2);
+            var corrft = Enumerable.Zip(bigfft, smolft, (a, b) => a * b).ToArray();
+            IFFT(corrft);
+            var correl = new double[bigarr.Count - smolar.Count];
+            for (int i = 0; i < correl.Length; i++)
+                correl[i] = corrft[i + smolar.Count].Magnitude;
+            return correl;
+        }
+
+        public static Task<IList<double>> CalcByFFTAsync(IList<double> bigarr, IList<double> smolar) =>
+            Task.Factory.StartNew(
+                args => {
+                    if (args is not Tuple<IList<double>, IList<double>> arrs)
+                        throw new ArgumentException($"Expected a pair of arrays, got {args?.GetType()}", nameof(args));
+                    return CalcByFFT(arrs.Item1, arrs.Item2);
+                },
+                Tuple.Create(bigarr, smolar),
+                Utils.Cancellation.Token,
+                TaskCreationOptions.None,
+                TaskScheduler.Default);
+
         public static async Task<double> FindPredictedDelay(
             this Statistics parent,
             double receiveDelay, 
 			double snrClean, 
 			double snrNoisy, 
+            bool useFft = true,
 			bool output = false)
 		{
 			SignalModulator gen = new() {
@@ -73,7 +106,9 @@ namespace MultipathSignal.Core
 			if (output)
                 parent.RaiseStatusChanged("Signal generation is complete. Calculating correlation...");
 
-			var correl = await CalculateAsync(signal, clearSignal);
+            var correl = useFft
+                ? await CalcByFFTAsync(signal, clearSignal)
+                : await CalculateAsync(signal, clearSignal);
 
             int maxPos = 0;
 			double maxVal = 0.0;
@@ -82,10 +117,11 @@ namespace MultipathSignal.Core
 					maxVal = Math.Abs(correl[i]);
 					maxPos = i;
 				}
-			var prediction = maxPos / SignalGenerator.Samplerate;
+			double prediction = maxPos / SignalGenerator.Samplerate;
+            // if (useFft) prediction -= parent.BitSeqLength / parent.ModulationSpeed;
 
 			if (output)
-				parent.RaisePlotDataReady(clearSignal, signal, correl);
+				parent.RaisePlotDataReady(receiveDelay, clearSignal, signal, correl);
 
 			return prediction;
 		}
