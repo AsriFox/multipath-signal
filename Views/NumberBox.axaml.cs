@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Layout;
 
 namespace MultipathSignal.Views
 {
@@ -48,6 +49,25 @@ namespace MultipathSignal.Views
 			get => GetValue(StepProperty);
 			set => SetValue(StepProperty, value);
 		}
+
+		public readonly static StyledProperty<Dock> TextPositionProperty = AvaloniaProperty.Register<NumberBox, Dock>(nameof(TextPosition));
+		public Dock TextPosition {
+			get => GetValue(TextPositionProperty);
+			set => SetValue(TextPositionProperty, value);
+		}
+
+		public HorizontalAlignment TextAlignHorizontal => TextPosition switch {
+			Dock.Left => HorizontalAlignment.Right,
+			Dock.Right => HorizontalAlignment.Left,
+			_ => HorizontalAlignment.Center
+		};
+		
+		public VerticalAlignment TextAlignVertical => TextPosition switch {
+			Dock.Top => VerticalAlignment.Bottom,
+			Dock.Bottom => VerticalAlignment.Top,
+			_ => VerticalAlignment.Center
+		};
+
 
 		public new void Focus() =>
 			(VisualChildren[0]      // DockPanel

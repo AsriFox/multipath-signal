@@ -143,12 +143,6 @@ namespace MultipathSignal.Core
 			}
 		}
 
-		public ShiftRegister(int size)
-		{
-			this.structure = new string('0', size);
-			this.state = new string('0', size);
-		}
-
 		public ShiftRegister(IEnumerable<char> structure)
 		{
 			this.structure = new string(structure.ToArray());
@@ -163,7 +157,7 @@ namespace MultipathSignal.Core
 			for (int i = 0; i < Size; i++)
 				feed += (structure[i] & state[i]) - '0';
 
-			state = ((feed & 1) > 0 ? "1" : "0") + state[1..];
+			state = (char)((feed % 2) + '0') + state[..(Size-1)];
 			return Output;
 		}
 
@@ -180,7 +174,7 @@ namespace MultipathSignal.Core
 		public void Reset() => state = new string('0', Size);
 	}
 
-	internal class GoldSequenceGenerator
+	internal static class GoldSequenceGenerator
 	{
 		public static IList<int> CrossCorrelation(string left, string right)
 		{
@@ -192,6 +186,34 @@ namespace MultipathSignal.Core
 				ccor.Add(cc);
 			}
 			return ccor;
+		}
+
+		public static IList<string> Generate(string structure1, string structure2)
+		{
+			if (structure1.Length != structure2.Length)
+				throw new ArgumentException("Please provide a pair of 'structure' arguments with the same length");
+			string initState = new('1', structure1.Length);
+
+			var seq1 = new ShiftRegister(structure1)
+				.GetSequence(initState)
+				.ToArray();
+
+			var seq2 = new ShiftRegister(structure2)
+				.GetSequence(initState)
+				.ToArray();
+
+			if (seq1.Length != seq2.Length)
+				throw new IndexOutOfRangeException();
+
+			int len = seq1.Length;
+			List<string> GoldSeqs = new();
+			for (int k = 0; k < len; k++) {
+				char[] goldSeq = new char[len];
+				for (int i = 0; i < len; i++)
+					goldSeq[i] = (seq1[i] ^ seq2[(i + k) % len]) > 0 ? '1' : '0';
+				GoldSeqs.Add(new(goldSeq));
+			}
+			return GoldSeqs;
 		}
 	}
 }

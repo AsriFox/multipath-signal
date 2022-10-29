@@ -3,7 +3,7 @@
         xmlns:local="clr-namespace:MultipathSignal.Views"
         x:Class="MultipathSignal.Views.MainWindow"
         Title="Multipath signal - delayed reception"
-        Width="783" Height="800" MinWidth="440" MinHeight="420">
+        Width="783" Height="800" MinWidth="576" MinHeight="420">
   <Design.DataContext>
     <local:MainWindowViewModel />
   </Design.DataContext>
@@ -18,10 +18,13 @@
       <Setter Property="FontSize" Value="12" />
     </Style>
     <Style Selector="local|NumberBox">
-      <Setter Property="HorizontalAlignment" Value="Stretch" />
-      <Setter Property="VerticalAlignment" Value="Bottom" />
-      <Setter Property="Margin" Value="0,8,0,0" />
+      <Setter Property="HorizontalAlignment" Value="Right" />
+      <Setter Property="VerticalAlignment" Value="Stretch" />
+      <Setter Property="Margin" Value="0" />
       <Setter Property="IsEnabled" Value="{Binding EditMode}" />
+    </Style>
+    <Style Selector="local|NumberBox /template/ NumericUpDown">
+      <Setter Property="MinWidth" Value="120" />
     </Style>
     <Style Selector="Expander">
       <Setter Property="Padding" Value="0" />
@@ -31,53 +34,20 @@
       <Setter Property="Foreground" Value="{StaticResource ThemeForegroundBrush}" />
       <Setter Property="Margin" Value="0,-2" />
     </Style>
-    <Style Selector="TabStripItem">
-      <Setter Property="Height" Value="20" />
-      <Setter Property="Margin" Value="0" />
-      <Setter Property="Template">
-        <ControlTemplate>
-          <Border Background="{TemplateBinding Background}"
-                  Height="{TemplateBinding Height}">
-            <ContentPresenter Content="{TemplateBinding Content}"
-                              HorizontalContentAlignment="Center" />
-          </Border>
-        </ControlTemplate>
-      </Setter>
-    </Style>
-    <Style Selector="TabStripItem:selected">
-      <Setter Property="Background" Value="{DynamicResource ThemeAccentBrush4}" />
-    </Style>
-    <Style Selector="TabStripItem:pointerover">
-      <Setter Property="Background" Value="{DynamicResource ThemeAccentBrush3}" />
-    </Style>
-    <Style Selector="TabStripItem:selected:pointerover">
-      <Setter Property="Background" Value="{DynamicResource ThemeAccentBrush2}" />
+    <Style Selector="Slider">
+      <Setter Property="TickFrequency" Value="1" />
+      <Setter Property="TickPlacement" Value="TopLeft" />
+      <Setter Property="IsSnapToTickEnabled" Value="True" />
+      <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
   </Window.Styles>
   
   <DockPanel>
-    <Grid Name="StatusBar" 
-          ColumnDefinitions="0.5*, 0.5*, 2*" 
-          DockPanel.Dock="Bottom">
-      
-      <TextBlock Text="Predicted delay:"
-                 VerticalAlignment="Center"
-                 TextWrapping="Wrap"
-                 Grid.Column="0"
-                 Margin="4" />
-      <TextBox Text="{Binding PredictedDelay, Mode=OneWay}"
-               VerticalContentAlignment="Center"
-               BorderBrush="Transparent"
-               IsReadOnly="True"
-               Grid.Column="1"
-               FontSize="12"
-               Margin="2"/>
-      <TextBlock Text="{Binding Status, Mode=OneWay}"
-                 VerticalAlignment="Center"
-                 TextWrapping="Wrap"
-                 Grid.Column="2" 
-                 Margin="4,0" />
-    </Grid>
+    <TextBlock Text="{Binding Status, Mode=OneWay}"
+               VerticalAlignment="Center"
+               DockPanel.Dock="Bottom"
+               TextWrapping="Wrap"
+               Margin="4" />
     
     <Grid Name="ActionButtons" 
           DockPanel.Dock="Bottom" 
@@ -100,151 +70,6 @@
                     Grid.Column="1"
                     PointerEnter="PointerMoveFocus" />
     </Grid>
-    
-    <WrapPanel Name="ParamsBlock" DockPanel.Dock="Bottom">
-      
-      <Expander Name="SignalParams" IsExpanded="True">
-        <Expander.Header>
-          <TextBlock Text="Signal parameters" />
-        </Expander.Header>
-        
-        <UniformGrid Rows="2">
-          <DockPanel>
-            <TextBlock Text="Modulation type"
-                       HorizontalAlignment="Center"
-                       VerticalAlignment="Bottom"
-                       DockPanel.Dock="Top"
-                       TextWrapping="Wrap"
-                       Margin="8,10,8,2" />
-            <ComboBox SelectedIndex="{Binding ModulationType, Mode=TwoWay}"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    IsEnabled="{Binding EditMode}" 
-                    PointerEnter="PointerMoveFocus">
-              <ComboBoxItem Content="BASK (OOK)" />
-              <ComboBoxItem Content="BPSK" />
-              <ComboBoxItem Content="BFSK (FT)" />
-            </ComboBox>
-          </DockPanel>
-
-          <local:NumberBox Header="Modulation depth"
-                           Format="{}{0:F4}"
-                           Step="0.01"
-                           Value="{Binding ModulationDepth, Mode=TwoWay}"
-                           Minimum="0"
-                           Maximum="1"
-                           PointerEnter="PointerMoveFocus" />
-          
-          <local:NumberBox Header="Modulation speed, bps"
-                           Format="{}{0:F2}"
-                           Step="10"
-                           Value="{Binding ModulationSpeed, Mode=TwoWay}"
-                           Minimum="10"
-                           PointerEnter="PointerMoveFocus" />
-          
-          <local:NumberBox Header="Sequence length, bits"
-                           Format="{}{0:F0}"
-                           Step="1"
-                           Value="{Binding BitSeqLength, Mode=TwoWay}" 
-                           Minimum="1"
-                           PointerEnter="PointerMoveFocus" />
-          
-          <local:NumberBox Header="Carrier frequency, Hz"
-                           Format="{}{0:F2}"
-                           Step="100"
-                           Value="{Binding MainFrequency, Mode=TwoWay}" 
-                           Minimum="100"
-                           PointerEnter="PointerMoveFocus" />
-          
-          <local:NumberBox Header="Samplerate, Hz"
-                           Format="{}{0:F0}"
-                           Step="1000"
-                           Value="{Binding Samplerate, Mode=TwoWay}"
-                           Minimum="1000" 
-                           PointerEnter="PointerMoveFocus" />
-        </UniformGrid>
-      </Expander>
-      
-      <Expander Name="SimulationParams" IsExpanded="True">
-        <Expander.Header>
-          <TextBlock Text="Simulation param-s" />
-        </Expander.Header>
-
-        <Grid ColumnDefinitions="*,*,*,*" RowDefinitions="*,*">
-          <local:NumberBox Header="Receive delay, s"
-                           Format="{}{0:F4}"
-                           Step="0.001"
-                           Value="{Binding ReceiveDelay, Mode=TwoWay}"
-                           Minimum="0"
-                           PointerEnter="PointerMoveFocus"
-                           Grid.Column="0"
-                           Grid.Row="0" />
-
-          <local:NumberBox Header="SNR for clean, dB"
-                           Format="{}{0:F2}"
-                           Step="1"
-                           Value="{Binding SNRClean, Mode=TwoWay}"
-                           PointerEnter="PointerMoveFocus"
-                           Grid.Column="1"
-                           Grid.Row="0" />
-
-          <local:NumberBox Header="SNR for noisy, dB"
-                           Format="{}{0:F2}"
-                           Step="1"
-                           Value="{Binding SNRNoisy, Mode=TwoWay}"
-                           PointerEnter="PointerMoveFocus"
-                           Grid.Column="2"
-                           Grid.Row="0" />
-
-          <ListBox Name="SimVariants"
-                   SelectedIndex="{Binding SimulationMode, Mode=TwoWay}"
-                   Padding="0"
-                   BorderBrush="Transparent"
-                   VerticalAlignment="Bottom"
-                   SelectionMode="Single"
-                   Grid.Column="0"
-                   Grid.Row="1">
-
-            <ListBoxItem Name="SimVariantSingle"
-                          Content="Single test" />
-
-            <ListBoxItem Name="SimVariantMulti"
-                          Content="Multiple tests" />
-
-            <ListBoxItem Name="SimVariantFull"
-                          Content="Gather statistics" />
-          </ListBox>
-
-          <local:NumberBox Header="Repeat tests count"
-                           Format="{}{0:F0}"
-                           Step="100"
-                           Value="{Binding TestsRepeatCount, Mode=TwoWay}"
-                           Minimum="1"
-                           IsVisible="{Binding !#SimVariantSingle.IsSelected}"
-                           PointerEnter="PointerMoveFocus"
-                           Grid.Column="1"
-                           Grid.Row="1" />
-          
-          <local:NumberBox Header="SNR maximum, dB"
-                           Format="{}{0:F2}"
-                           Step="1"
-                           Value="{Binding SNRNoisyMax, Mode=TwoWay}"
-                           IsVisible="{Binding #SimVariantFull.IsSelected}"
-                           PointerEnter="PointerMoveFocus"
-                           Grid.Column="3"
-                           Grid.Row="0" />
-          
-          <local:NumberBox Header="SNR step size, dB"
-                           Format="{}{0:F2}"
-                           Step="1"
-                           Value="{Binding SNRNoisyStep, Mode=TwoWay}"
-                           IsVisible="{Binding #SimVariantFull.IsSelected}"
-                           PointerEnter="PointerMoveFocus"
-                           Grid.Column="3"
-                           Grid.Row="1" />
-        </Grid>
-      </Expander>
-    </WrapPanel>
 
     <DockPanel Name="SliderBar"
              IsVisible="{Binding #SimVariantFull.IsSelected}"
@@ -271,11 +96,7 @@
               Minimum="{Binding SNRNoisy}"
               Maximum="{Binding SNRNoisyMax}"
               SmallChange="{Binding SNRNoisyStep}"
-              LargeChange="{Binding SNRNoisyStep}"
-              TickPlacement="TopLeft"
-              TickFrequency="1"
-              IsSnapToTickEnabled="True"
-              VerticalAlignment="Center" />
+              LargeChange="{Binding SNRNoisyStep}" />
     </DockPanel>
 
     <UniformGrid Columns="2">
@@ -287,51 +108,216 @@
 
       <ScrollViewer>
         <StackPanel Name="PanelSequences">
+          <StackPanel.Styles>
+            <Style Selector="Slider">
+              <Setter Property="Maximum" Value="30" />
+            </Style>
+            <Style Selector="TextBlock">
+              <Setter Property="HorizontalAlignment" Value="Center" />
+              <Setter Property="VerticalAlignment" Value="Center" />
+              <Setter Property="TextWrapping" Value="Wrap" />
+            </Style>
+            <Style Selector="TextBox">
+              <Setter Property="IsReadOnly" Value="True" />
+              <Setter Property="FontFamily" Value="Noto Mono" />
+              <Setter Property="VerticalContentAlignment" Value="Center" />
+              <Setter Property="HorizontalContentAlignment" Value="Center" />
+            </Style>
+            <Style Selector="local|NumberBox">
+              <Setter Property="Format" Value="{}{0:F0}" />
+              <Setter Property="Minimum" Value="0" />
+              <Setter Property="Maximum" Value="30" />
+              <Setter Property="Step" Value="1"/>
+              <Setter Property="Width" Value="44" />
+              <Setter Property="TextPosition" Value="Top" />
+              <Setter Property="VerticalAlignment" Value="Bottom" />
+            </Style>
+            <Style Selector="local|NumberBox /template/ NumericUpDown">
+              <Setter Property="MinWidth" Value="0" />
+              <Setter Property="Padding" Value="0" />
+            </Style>
+          </StackPanel.Styles>
 
+          <UniformGrid Rows="1">
+            <TextBlock Text="Shift register 1" />
+            <TextBlock Text="Structure: " />
+            <TextBox Text="00101" />
+            <TextBlock Text="Initial state: " />
+            <TextBox Text="11111" />
+          </UniformGrid>
+
+          <UniformGrid Rows="1">
+            <TextBlock Text="Shift register 2" />
+            <TextBlock Text="Structure: " />
+            <TextBox Text="01111" />
+            <TextBlock Text="Initial state: " />
+            <TextBox Text="11111" />
+          </UniformGrid>
+
+          <Separator Background="{DynamicResource ThemeBorderMidBrush}" Height="1" Margin="4,4,4,0" />
+
+          <Grid ColumnDefinitions="40,*,Auto" RowDefinitions="Auto,Auto">
+            <TextBlock Text="GS00" FontSize="20" FontWeight="Bold"
+                       Margin="4" Grid.Column="0" Grid.RowSpan="2" />
+            <Slider Value="{Binding GoldSeqShift[0], Mode=TwoWay}"
+                    Grid.Column="1" Grid.Row="0" />
+            <TextBox Text="{Binding GoldSeq[0], Mode=OneWay}"
+                     Grid.Column="1" Grid.Row="1" />
+            <local:NumberBox Header="Shift"
+                             Value="{Binding GoldSeqShift[0], Mode=TwoWay}"
+                             Grid.Column="2" Grid.RowSpan="2" />
+          </Grid>
+
+          <Separator Background="{DynamicResource ThemeBorderMidBrush}" Height="1" Margin="4,4,4,0" />
+
+          <Grid ColumnDefinitions="40,*,Auto" RowDefinitions="Auto,Auto">
+            <TextBlock Text="GS01" FontSize="20" FontWeight="Bold"
+                       Margin="4" Grid.Column="0" Grid.RowSpan="2" />
+            <Slider Value="{Binding GoldSeqShift[1], Mode=TwoWay}"
+                    Grid.Column="1" Grid.Row="0" />
+            <TextBox Text="{Binding GoldSeq[1], Mode=OneWay}"
+                     Grid.Column="1" Grid.Row="1" />
+            <local:NumberBox Header="Shift"
+                             Value="{Binding GoldSeqShift[1], Mode=TwoWay}"
+                             Grid.Column="2" Grid.RowSpan="2" />
+          </Grid>
+
+          <Separator Background="{DynamicResource ThemeBorderMidBrush}" Height="1" Margin="4,4,4,0" />
+
+          <Grid ColumnDefinitions="40,*,Auto" RowDefinitions="Auto,Auto">
+            <TextBlock Text="GS10" FontSize="20" FontWeight="Bold"
+                       Margin="4" Grid.Column="0" Grid.RowSpan="2" />
+            <Slider Value="{Binding GoldSeqShift[2], Mode=TwoWay}"
+                    Grid.Column="1" Grid.Row="0" />
+            <TextBox Text="{Binding GoldSeq[2], Mode=OneWay}"
+                     Grid.Column="1" Grid.Row="1" />
+            <local:NumberBox Header="Shift"
+                             Value="{Binding GoldSeqShift[2], Mode=TwoWay}"
+                             Grid.Column="2" Grid.RowSpan="2" />
+          </Grid>
+
+          <Separator Background="{DynamicResource ThemeBorderMidBrush}" Height="1" Margin="4,4,4,0" />
+
+          <Grid ColumnDefinitions="40,*,Auto" RowDefinitions="Auto,Auto">
+            <TextBlock Text="GS11" FontSize="20" FontWeight="Bold"
+                       Margin="4" Grid.Column="0" Grid.RowSpan="2" />
+            <Slider Value="{Binding GoldSeqShift[3], Mode=TwoWay}"
+                    Grid.Column="1" Grid.Row="0" />
+            <TextBox Text="{Binding GoldSeq[3], Mode=OneWay}"
+                     Grid.Column="1" Grid.Row="1" />
+            <local:NumberBox Header="Shift"
+                             Value="{Binding GoldSeqShift[3], Mode=TwoWay}"
+                             Grid.Column="2" Grid.RowSpan="2" />
+          </Grid>
         </StackPanel>
       </ScrollViewer>
 
       <local:PlotView Name="PlotResponse"
                       DataContext="{Binding Plots[2]}" />
 
-      <DockPanel>
-        <TabStrip Name="TabControlParameters"
-                  SelectedIndex="0"
-                  DockPanel.Dock="Top">
-          <TabStrip.ItemsPanel>
-            <ItemsPanelTemplate>
-              <UniformGrid Rows="1" />
-            </ItemsPanelTemplate>
-          </TabStrip.ItemsPanel>
+      <ScrollViewer>
+        <StackPanel>
+          <Expander HorizontalContentAlignment="Stretch"
+                    IsExpanded="True">
+            <Expander.Header>
+              <TextBlock Text="Modulation parameters" />
+            </Expander.Header>
+            <StackPanel>
+              <local:NumberBox Header="Modulation speed, bps"
+                               Format="{}{0:F2}"
+                               Step="10"
+                               Value="{Binding ModulationSpeed, Mode=TwoWay}"
+                               Minimum="10"
+                               PointerEnter="PointerMoveFocus" />
 
-          <TabStripItem Content="Sequence" />
-          <TabStripItem Content="Modulation" />
-          <TabStripItem Content="Research" />
-        </TabStrip>
+              <local:NumberBox Header="Sequence length, bits"
+                               Format="{}{0:F0}"
+                               Step="1"
+                               Value="{Binding BitSeqLength, Mode=TwoWay}"
+                               Minimum="1"
+                               PointerEnter="PointerMoveFocus" />
 
-        <Carousel Name="PanelParameters"
-                  SelectedIndex="{Binding #TabControlParameters.SelectedIndex}">
-
-          <ScrollViewer>
-            <StackPanel Name="PanelSequenceParams">
-              
+              <local:NumberBox Header="Samplerate, Hz"
+                               Format="{}{0:F0}"
+                               Step="1000"
+                               Value="{Binding Samplerate, Mode=TwoWay}"
+                               Minimum="1000"
+                               PointerEnter="PointerMoveFocus" />
             </StackPanel>
-          </ScrollViewer>
+          </Expander>
 
-          <ScrollViewer>
-            <StackPanel Name="PanelModulationParams">
-              
+          <Expander HorizontalContentAlignment="Stretch">
+            <Expander.Header>
+              <TextBlock Text="Research parameters" />
+            </Expander.Header>
+            <StackPanel>
+              <local:NumberBox Header="SNR for clean, dB"
+                               Format="{}{0:F2}"
+                               Step="1"
+                               Value="{Binding SNRClean, Mode=TwoWay}"
+                               PointerEnter="PointerMoveFocus"
+                               Grid.Column="1"
+                               Grid.Row="0" />
+
+              <local:NumberBox Header="SNR for noisy, dB"
+                               Format="{}{0:F2}"
+                               Step="1"
+                               Value="{Binding SNRNoisy, Mode=TwoWay}"
+                               PointerEnter="PointerMoveFocus"
+                               Grid.Column="2"
+                               Grid.Row="0" />
+
+              <ListBox Name="SimVariants"
+                       SelectedIndex="{Binding SimulationMode, Mode=TwoWay}"
+                       Padding="0"
+                       BorderBrush="Transparent"
+                       VerticalAlignment="Bottom"
+                       SelectionMode="Single"
+                       Grid.Column="0"
+                       Grid.Row="1">
+
+                <ListBoxItem Name="SimVariantSingle"
+                              Content="Single test" />
+
+                <ListBoxItem Name="SimVariantMulti"
+                              Content="Multiple tests" />
+
+                <ListBoxItem Name="SimVariantFull"
+                              Content="Gather statistics" />
+              </ListBox>
+
+              <local:NumberBox Header="Repeat tests count"
+                               Format="{}{0:F0}"
+                               Step="100"
+                               Value="{Binding TestsRepeatCount, Mode=TwoWay}"
+                               Minimum="1"
+                               IsVisible="{Binding !#SimVariantSingle.IsSelected}"
+                               PointerEnter="PointerMoveFocus"
+                               Grid.Column="1"
+                               Grid.Row="1" />
+
+              <local:NumberBox Header="SNR maximum, dB"
+                               Format="{}{0:F2}"
+                               Step="1"
+                               Value="{Binding SNRNoisyMax, Mode=TwoWay}"
+                               IsVisible="{Binding #SimVariantFull.IsSelected}"
+                               PointerEnter="PointerMoveFocus"
+                               Grid.Column="3"
+                               Grid.Row="0" />
+
+              <local:NumberBox Header="SNR step size, dB"
+                               Format="{}{0:F2}"
+                               Step="1"
+                               Value="{Binding SNRNoisyStep, Mode=TwoWay}"
+                               IsVisible="{Binding #SimVariantFull.IsSelected}"
+                               PointerEnter="PointerMoveFocus"
+                               Grid.Column="3"
+                               Grid.Row="1" />              
             </StackPanel>
-          </ScrollViewer>
+          </Expander>
 
-          <ScrollViewer>
-            <StackPanel Name="PanelResearchParams">
-              
-            </StackPanel>
-          </ScrollViewer>
-
-        </Carousel>
-      </DockPanel>
+        </StackPanel>
+      </ScrollViewer>
 
       <local:PlotView Name="PlotStatistics"
                       DataContext="{Binding Plots[3]}" />

@@ -69,16 +69,16 @@ namespace MultipathSignal.Core
 			var signal = task.Result;
 
 			int initDelay = (int)(bitDelay * SignalGenerator.Samplerate / ModulationSpeed);
-			var clearSignal = NoiseGenerator.Apply(
+			var clearSignal = //NoiseGenerator.Apply(
 							  signal.Skip(initDelay)
 									.Take((int)(BitSeqLength * SignalGenerator.Samplerate / ModulationSpeed))
-									.ToList(),
-							  Math.Pow(10.0, 0.1 * snrClean));
+									.ToList();
+			//Math.Pow(10.0, 0.1 * snrClean));
 
-			signal = NoiseGenerator.Apply(
+			signal = //NoiseGenerator.Apply(
 						 signal.Skip(initDelay - (int)(receiveDelay * SignalGenerator.Samplerate))
-							   .ToList(),
-						 Math.Pow(10.0, 0.1 * snrNoisy));
+							   .ToList();
+						 //Math.Pow(10.0, 0.1 * snrNoisy));
 
 			if (output)
 				StatusChanged?.Invoke("Signal generation is complete. Calculating correlation...");

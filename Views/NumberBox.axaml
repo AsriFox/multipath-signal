@@ -2,7 +2,11 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="using:MultipathSignal.Views">
   <Design.PreviewWith>
-    <local:NumberBox Header="Template" Value="0" Format="{}{0:F4}" />
+    <StackPanel>
+      <local:NumberBox Header="" Value="20000" Format="{}{0:F3}" TextPosition="Top" />
+      <local:NumberBox Header="Template" Value="10000" Format="{}{0:F4}" TextPosition="Top" />
+      <local:NumberBox Header="Template2" Value="1000" Format="{}{0:F0}" TextPosition="Left" />
+    </StackPanel>
   </Design.PreviewWith>
   
   <Style Selector="local|NumberBox">
@@ -10,11 +14,13 @@
       <ControlTemplate>
         <DockPanel>
           <TextBlock Text="{TemplateBinding Header}"
-                     HorizontalAlignment="Center"
-                     VerticalAlignment="Bottom"
-                     DockPanel.Dock="Top"
+                     HorizontalAlignment="{Binding $parent[1].TextAlignHorizontal}"
+                     VerticalAlignment="{Binding $parent[1].TextAlignVertical}"
+                     DockPanel.Dock="{TemplateBinding TextPosition}"
+                     IsVisible="{TemplateBinding Header}"
                      TextWrapping="Wrap"
-                     Margin="8,2"/>
+                     Margin="0"
+                     Padding="8,2"/>
           <NumericUpDown FormatString="{TemplateBinding Format}"
                          Value="{TemplateBinding Value, Mode=TwoWay}"
                          Minimum="{TemplateBinding Minimum}"

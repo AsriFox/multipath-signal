@@ -50,7 +50,7 @@ namespace MultipathSignal.Views
 			Series.CollectionChanged += OnCollectionChanged;
 		}
 
-		public PlotViewModel(int seriesCount) : base() 
+		public PlotViewModel(int seriesCount) : this() 
 		{
 			for (int i = 0; i < seriesCount; i++)
 				this.CreateSeries();
@@ -140,6 +140,7 @@ namespace MultipathSignal.Views
 				default:
 					return;
 			}
+			Model.Series.Clear();
 			Model = new PlotModel();
 			Model.Axes.Add(
 				new LinearAxis { 
