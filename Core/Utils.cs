@@ -41,7 +41,7 @@ namespace MultipathSignal.Core
 		public static IEnumerable<OxyPlot.DataPoint> Plotify(this IList<double> values) 
 		{
 			if (values.Count <= MaxPointsCount)
-				return values.Select((v, i) => new OxyPlot.DataPoint(i / SignalGenerator.Samplerate, v));
+				return values.Select((v, i) => new OxyPlot.DataPoint(i / SignalModulator.Samplerate, v));
 
 			int div = 2;
 			while (values.Count / div > MaxPointsCount)
@@ -49,7 +49,7 @@ namespace MultipathSignal.Core
 
 			var result = new OxyPlot.DataPoint[values.Count / div];
 			for (int i = 0; i < values.Count; i += div)
-				result[i / div] = new OxyPlot.DataPoint(i / SignalGenerator.Samplerate, values[i]);
+				result[i / div] = new OxyPlot.DataPoint(i / SignalModulator.Samplerate, values[i]);
 			return result;
 
 			//static double lerp(double a, double b, double t) => a * t + (1.0 - t) * b;

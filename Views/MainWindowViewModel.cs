@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Markup;
 using Avalonia.Threading;
+using DynamicData;
 using MultipathSignal.Core;
 using OxyPlot;
 using ReactiveUI;
@@ -18,7 +21,7 @@ namespace MultipathSignal.Views
 		/// <summary>
 		/// Collection of view models for PlotView elements.
 		/// </summary>
-		public System.Collections.ObjectModel.ObservableCollection<PlotViewModel> Plots { get; private set; }
+		public ObservableCollection<PlotViewModel> Plots { get; private set; }
 
 		public MainWindowViewModel()
 		{
@@ -28,23 +31,60 @@ namespace MultipathSignal.Views
 				new PlotViewModel(4) { Title = "Filtered responses to signal" },
 				new PlotViewModel(1) { Title = "Statistics", MinimumY = 0.0 },
 			};
+			GoldSeqShift = new() { 0, 10, 20, 30 };
 
-			Plots.CollectionChanged += (_, _) => this.RaisePropertyChanged(nameof(Plots));
+            Plots.CollectionChanged += (_, _) => this.RaisePropertyChanged(nameof(Plots));
+			GoldSeqShift.CollectionChanged += (_, _) => this.RaisePropertyChanged(nameof(GoldSeqShift));
+
+			this.PropertyChanged += OnPropertyChanged;
 		}
+
+		public Task GenerateGoldSequences()
+		{
+            return Task.Factory.StartNew(arg => {
+                if (arg is not double[] shifts)
+                    throw new InvalidCastException();
+
+                var seqs = GoldSequenceGenerator.Generate("00101", "01111");
+                return shifts.Select(j => seqs[(int)j]).ToArray();
+            },
+            GoldSeqShift.ToArray())
+				.ContinueWith(t => {
+					GoldSeq = t.Result;
+					this.RaisePropertyChanged(nameof(GoldSeq));
+				});
+        }
 
 		public async void Process()
 		{
 			EditMode = false;
 
-			GoldSeq = await Task.Factory.StartNew(arg => {
-				if (arg is not double[] shifts)
-					throw new InvalidCastException();
+			if (GoldSeq.Any(s => s is null || s.Length == 0)) 
+				await GenerateGoldSequences();
 
-				var seqs = GoldSequenceGenerator.Generate("00101", "01111");
-				return shifts.Select(j => seqs[(int)j]).ToArray();
-			}, 
-			GoldSeqShift);
-			this.RaisePropertyChanged(nameof(GoldSeq));
+			SignalModulator.Samplerate = Samplerate;
+			SignalModulator.BitRate = ModulationSpeed;
+
+			try {
+				switch (SimulationMode) {
+					case 0:     // Single test
+						Status = "Processing one signal...";
+                        var (ix, qx) = await SignalModulator.ModulateGoldAsync(
+                                Utils.RandomBitSeq(BitSeqLength).ToArray(),
+                                GoldSeq);
+                        await Dispatcher.UIThread.InvokeAsync(() => OnPlotDataReady(0, ix, qx));
+                        this.RaisePropertyChanged(nameof(Plots));
+						break;
+					case 1:
+						break;
+					case 2:
+						break;
+				}
+			}
+			catch (OperationCanceledException) {
+				Status = "Operation was cancelled.";
+				Utils.Cancellation = new();
+			}
 
 			//SignalGenerator.Samplerate = Samplerate;
 			//Statistics stat = new() {
@@ -118,7 +158,23 @@ namespace MultipathSignal.Views
 
 		public void StopProcess() => Utils.Cancellation.Cancel();
 
-		public void OnStatusChanged(string status) => Status = status;
+        private void OnPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            switch (e.PropertyName) {
+				case nameof(GoldSeqShift):
+					break;
+				default:
+					return;
+			}
+			GenerateGoldSequences();
+        }
+
+        public void OnStatusChanged(string status) => Status = status;
+
+		public void OnPlotDataReady(int where, params IList<double>[] values)
+		{
+			Plots[where].ReplacePointsWith(values.Select(v => v.Plotify()).ToArray());
+		}
 
 		#region Modulation parameters
 
@@ -150,7 +206,7 @@ namespace MultipathSignal.Views
 
         public string[] GoldSeq { get; private set; } = new string[4];
 
-		public double[] GoldSeqShift { get; } = new double[] { 0, 10, 20, 30 };
+		public ObservableCollection<double> GoldSeqShift { get; private set; }
 
         #endregion
 

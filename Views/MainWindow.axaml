@@ -125,8 +125,6 @@
             </Style>
             <Style Selector="local|NumberBox">
               <Setter Property="Format" Value="{}{0:F0}" />
-              <Setter Property="Minimum" Value="0" />
-              <Setter Property="Maximum" Value="30" />
               <Setter Property="Step" Value="1"/>
               <Setter Property="Width" Value="44" />
               <Setter Property="TextPosition" Value="Top" />
@@ -165,7 +163,9 @@
                      Grid.Column="1" Grid.Row="1" />
             <local:NumberBox Header="Shift"
                              Value="{Binding GoldSeqShift[0], Mode=TwoWay}"
-                             Grid.Column="2" Grid.RowSpan="2" />
+                             Minimum="0" Maximum="30"
+                             Grid.Column="2" Grid.RowSpan="2"
+                             PointerEnter="PointerMoveFocus" />
           </Grid>
 
           <Separator Background="{DynamicResource ThemeBorderMidBrush}" Height="1" Margin="4,4,4,0" />
@@ -179,7 +179,9 @@
                      Grid.Column="1" Grid.Row="1" />
             <local:NumberBox Header="Shift"
                              Value="{Binding GoldSeqShift[1], Mode=TwoWay}"
-                             Grid.Column="2" Grid.RowSpan="2" />
+                             Minimum="0" Maximum="30"
+                             Grid.Column="2" Grid.RowSpan="2"
+                             PointerEnter="PointerMoveFocus" />
           </Grid>
 
           <Separator Background="{DynamicResource ThemeBorderMidBrush}" Height="1" Margin="4,4,4,0" />
@@ -193,7 +195,9 @@
                      Grid.Column="1" Grid.Row="1" />
             <local:NumberBox Header="Shift"
                              Value="{Binding GoldSeqShift[2], Mode=TwoWay}"
-                             Grid.Column="2" Grid.RowSpan="2" />
+                             Minimum="0" Maximum="30"
+                             Grid.Column="2" Grid.RowSpan="2" 
+                             PointerEnter="PointerMoveFocus" />
           </Grid>
 
           <Separator Background="{DynamicResource ThemeBorderMidBrush}" Height="1" Margin="4,4,4,0" />
@@ -207,7 +211,9 @@
                      Grid.Column="1" Grid.Row="1" />
             <local:NumberBox Header="Shift"
                              Value="{Binding GoldSeqShift[3], Mode=TwoWay}"
-                             Grid.Column="2" Grid.RowSpan="2" />
+                             Minimum="0" Maximum="30"
+                             Grid.Column="2" Grid.RowSpan="2" 
+                             PointerEnter="PointerMoveFocus" />
           </Grid>
         </StackPanel>
       </ScrollViewer>

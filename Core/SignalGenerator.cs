@@ -7,106 +7,56 @@ using System.Threading.Tasks;
 
 namespace MultipathSignal.Core
 { 
-	/// <summary>
-	/// Signal generator: harmonic wave
-	/// </summary>
-	internal class SignalGenerator
-	{
-		public static double Samplerate { get; set; } = 10;
-
-		public static double Delta {
-			get => 1.0 / Samplerate;
-			set => Samplerate = 1.0 / value;
-		}
-
-		public double Phase { get; set; } = 0;
-
-		public double Frequency { get; set; } = 1;
-
-		public double Period {
-			get => 1.0 / (Math.Tau * Frequency);
-			set => Frequency = Math.Tau / value;
-		}
-
-		public double GetNextSample() => Math.Sin(Phase += Frequency * Delta);
-	}
-
 	internal class SignalModulator
 	{
-		public enum Modulation { 
-			/// <summary>
-			/// On-Off Keying: amplitude shift keying with 2 states (1 bit)
-			/// </summary>
-			OOK,
-			/// <summary>
-			/// BPSK: binary phase shift keying (2 states - 1 bit) 
-			/// <br/>
-			/// NRZI variation (flip on "1", no flip on "0")
-			/// </summary>
-			BPSK,
-			/// <summary>
-			/// BFSK: binary frequency shift keying (2 states - 1 bit) 
-			/// <br/>
-			/// "Frequency Telegraph"
-			/// </summary>
-			FT,
-		}
+		public static double Samplerate = 100.0;
 
-		public Modulation Method { get; set; } = Modulation.OOK;
+		public static double BitRate { get; set; } = 20.0;
 
-		public SignalGenerator Generator { get; set; } = new();
+		public static double BitLength => Samplerate / BitRate;
 
-		public double BitLength { get; set; } = 5;
-
-		public double BitRate {
-			get => 1.0 / BitLength;
-			set => BitLength = 1.0 / value;
-		}
-
-		public double MainFrequency { get; set; } = 1.0;
-
-		public double Depth { get; set; } = 0.8;
-
-		public IList<double> Modulate(IEnumerable<bool> modul)
+		public static IList<bool> Construct(IList<bool> modul, string[] goldSeq)
 		{
-			Generator.Frequency = MainFrequency;
-
-			Func<bool, double> modfunc = Method switch 
-			{
-				Modulation.OOK => q => q ? 1.0 + Depth : 1.0 - Depth,
-
-				Modulation.BPSK => q => {
-					if (q) Generator.Phase += Math.PI;
-					return 1.0;
-				},
-				Modulation.FT => q => {
-					Generator.Frequency = MainFrequency * (q ? 1.0 : 1.0 - Depth);
-					return 1.0;
-				},
-				_ => throw new NotImplementedException(),
-			};
-
-			var signal = new List<double>();
-			foreach (var q in modul) {
-				double a = modfunc(q);
-                for (uint i = 0; i < BitLength * SignalGenerator.Samplerate; i++)
-					signal.Add(Generator.GetNextSample() * a);
+			List<bool> result = new();
+			for (int k = 0; k + 1 < modul.Count; k += 2) {
+				int bb = modul[k] ? (modul[k + 1] ? 3 : 2) : (modul[k + 1] ? 1 : 0);
+				result.AddRange(goldSeq[bb].Select(c => c == '1'));
 			}
-			return signal;
+			if (modul.Count % 2 > 0)
+				result.AddRange(goldSeq[modul[^1] ? 2 : 0].Select(c => c == '1'));
+			return result;
+		}
+
+		public static (IList<double>, IList<double>) Modulate(IList<bool> modul)
+		{
+			List<double> vi = new(), vq = new();
+			void modulate(bool bi, bool bq) {
+				double ai = bi ? 1.0 : -1.0, aq = bq ? 1.0 : -1.0;
+				for (int i = 0; i < BitLength; i++) {
+					vi.Add(ai);
+					vq.Add(aq);
+				}
+			}
+
+			for (int j = 0; j + 1 < modul.Count; j += 2)
+				modulate(modul[j], modul[j + 1]);
+			if (modul.Count % 2 > 0)
+				modulate(modul[^1], false);
+			return (vi, vq);
 		}
 
 		/// <summary>
 		/// Modulate a bit sequence asynchronously.
 		/// Uses the default cancellation token.
 		/// </summary>
-		public Task<IList<double>> ModulateAsync(IEnumerable<bool> modul) =>
+		public static Task<(IList<double>, IList<double>)> ModulateGoldAsync(IList<bool> modul, string[] goldSeq) =>
 			Task.Factory.StartNew(
-				mv => {
-					if (mv is not IEnumerable<bool> @modv) 
-						return Array.Empty<double>();
-					return Modulate(modv);
+				args => {
+					if (args is not Tuple<IList<bool>, string[]> @aargs) 
+						return (Array.Empty<double>(), Array.Empty<double>());
+					return Modulate(Construct(aargs.Item1, aargs.Item2));
 				}, 
-				modul,
+				Tuple.Create(modul, goldSeq),
 				Utils.Cancellation.Token, 
 				TaskCreationOptions.None, 
 				TaskScheduler.Default);
