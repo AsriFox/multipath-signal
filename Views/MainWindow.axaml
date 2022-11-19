@@ -99,14 +99,28 @@
               LargeChange="{Binding SNRNoisyStep}" />
     </DockPanel>
 
-    <UniformGrid Columns="2">
+    <Grid ColumnDefinitions="*,*" RowDefinitions="*,*,2*,2*">
       <local:PlotView Name="PlotSignal"
-                      DataContext="{Binding Plots[0]}" />
+                      DataContext="{Binding Plots[0]}"
+                      Grid.ColumnSpan="2"
+                      Grid.Row="0" />
 
       <local:PlotView Name="PlotImpulseResponse"
-                      DataContext="{Binding Plots[1]}" />
+                      DataContext="{Binding Plots[1]}"
+                      Grid.ColumnSpan="2"
+                      Grid.Row="1" />
 
-      <ScrollViewer>
+      <local:PlotView Name="PlotResponse"
+                      DataContext="{Binding Plots[2]}"
+                      Grid.Column="0"
+                      Grid.Row="3" />
+
+      <local:PlotView Name="PlotStatistics"
+                      DataContext="{Binding Plots[3]}"
+                      Grid.Column="1"
+                      Grid.Row="3" />
+
+      <ScrollViewer Grid.Column="0" Grid.Row="2">
         <StackPanel Name="PanelSequences">
           <StackPanel.Styles>
             <Style Selector="Slider">
@@ -218,10 +232,7 @@
         </StackPanel>
       </ScrollViewer>
 
-      <local:PlotView Name="PlotResponse"
-                      DataContext="{Binding Plots[2]}" />
-
-      <ScrollViewer>
+      <ScrollViewer Grid.Column="1" Grid.Row="2">
         <StackPanel>
           <Expander HorizontalContentAlignment="Stretch"
                     IsExpanded="True">
@@ -324,9 +335,6 @@
 
         </StackPanel>
       </ScrollViewer>
-
-      <local:PlotView Name="PlotStatistics"
-                      DataContext="{Binding Plots[3]}" />
-    </UniformGrid>
+    </Grid>
   </DockPanel>
 </Window>

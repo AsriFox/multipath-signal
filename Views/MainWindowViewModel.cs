@@ -26,14 +26,20 @@ namespace MultipathSignal.Views
 		public MainWindowViewModel()
 		{
 			Plots = new() {
-				new PlotViewModel(2) { Title = "Modulated signal" },
-				new PlotViewModel(4) { Title = "Impulse responses of filters" },
+				new PlotViewModel(2) { Title = "Modulated signal, I-component" },
+				new PlotViewModel(2) { Title = "Modulated signal, Q-component" },
 				new PlotViewModel(4) { Title = "Filtered responses to signal" },
 				new PlotViewModel(1) { Title = "Statistics", MinimumY = 0.0 },
 			};
-			GoldSeqShift = new() { 0, 10, 20, 30 };
+
+			Plots[0].Series[0].Color = OxyColors.LightSalmon;
+			Plots[0].Series[1].Color = OxyColors.OrangeRed;
+			Plots[1].Series[0].Color = OxyColors.LightBlue;
+			Plots[1].Series[1].Color = OxyColors.DarkBlue;
 
             Plots.CollectionChanged += (_, _) => this.RaisePropertyChanged(nameof(Plots));
+
+			GoldSeqShift = new() { 0, 10, 20, 30 };
 			GoldSeqShift.CollectionChanged += (_, _) => this.RaisePropertyChanged(nameof(GoldSeqShift));
 
 			this.PropertyChanged += OnPropertyChanged;
@@ -72,7 +78,17 @@ namespace MultipathSignal.Views
                         var (ix, qx) = await SignalModulator.ModulateGoldAsync(
                                 Utils.RandomBitSeq(BitSeqLength).ToArray(),
                                 GoldSeq);
-                        await Dispatcher.UIThread.InvokeAsync(() => OnPlotDataReady(0, ix, qx));
+						
+						var inx = Utils.ApplyNoise(ix, Math.Pow(10.0, 0.1 * SNRNoisy));
+						var qnx = Utils.ApplyNoise(qx, Math.Pow(10.0, 0.1 * SNRNoisy));
+						
+						ix = Utils.ApplyNoise(ix, Math.Pow(10.0, 0.1 * SNRClean));
+						qx = Utils.ApplyNoise(qx, Math.Pow(10.0, 0.1 * SNRClean));
+
+                        await Dispatcher.UIThread.InvokeAsync(() => {
+							OnPlotDataReady(0, inx, ix);
+							OnPlotDataReady(1, qnx, qx);
+						});
                         this.RaisePropertyChanged(nameof(Plots));
 						break;
 					case 1:
