@@ -116,6 +116,7 @@
                     PointerEnter="PointerMoveFocus">
               <ComboBoxItem Content="BASK (OOK)" />
               <ComboBoxItem Content="BPSK" />
+              <ComboBoxItem Content="BPSK-NRZI" />
               <ComboBoxItem Content="BFSK (FT)" />
             </ComboBox>
           </DockPanel>
@@ -239,14 +240,34 @@
       </Expander>
     </WrapPanel>
 
-    <UniformGrid Name="PlotsPanel" Columns="1">
-      <local:PlotView Name="PlotSignal"
-                      DataContext="{Binding Plots[0]}" />
-      <local:PlotView Name="PlotCorrel"
-                      DataContext="{Binding Plots[1]}" />
-      <local:PlotView Name="PlotStats"
-                      DataContext="{Binding Plots[2]}"
-                      IsVisible="{Binding #SimVariantFull.IsSelected}"/>
-    </UniformGrid>
+    <TabControl>
+      <TabItem FontSize="12" Margin="0" Padding="10, 2" MinHeight="0">
+        <TabItem.Header>
+          <TextBlock Text="All plots" />
+        </TabItem.Header>
+        <Grid Name="PlotsPanel"
+              ColumnDefinitions="*,*"
+              RowDefinitions="*,*">
+          <local:PlotView Name="PlotSignal"
+                          DataContext="{Binding Plots[0]}" 
+                          Grid.ColumnSpan="2" Grid.Row="0" />
+          <local:PlotView Name="PlotCorrel"
+                          DataContext="{Binding Plots[1]}"
+                          Grid.Column="0" Grid.Row="1" />
+          <local:PlotView Name="PlotStats"
+                          DataContext="{Binding Plots[2]}"
+                          IsVisible="{Binding !SimVariantSingle.IsSelected}"
+                          Grid.Column="1" Grid.Row="1" />
+        </Grid>
+      </TabItem>
+      
+      <TabItem FontSize="12" Margin="0" Padding="10, 2" MinHeight="0">
+        <TabItem.Header>
+          <TextBlock Text="Statistics" />
+        </TabItem.Header>
+        <local:PlotView Name="PlotStatsBig" 
+                        DataContext="{Binding Plots[2]}" />
+      </TabItem>
+    </TabControl>
   </DockPanel>
 </Window>

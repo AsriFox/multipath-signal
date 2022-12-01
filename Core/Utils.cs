@@ -22,19 +22,33 @@ namespace MultipathSignal.Core
             if (signal.Count <= 0)
                 return Array.Empty<double>();
 
-            MathNet.Numerics.Distributions.Normal rand = new(new MersenneTwister(true));
+			MersenneTwister rng = new(true);
+			double sample() {
+				double s = 0.0;
+				for (int i = 0; i < 12; i++)
+					s += 2.0 * rng.NextDouble() - 1.0;
+				return s / 12.0;
+			}
+
+            //MathNet.Numerics.Distributions.Normal rand = new(new MersenneTwister(true));
             var noise = new double[signal.Count];
             double energyNoise = 0.0, energySignal = 0.0;
             for (int i = 0; i < signal.Count; i++)
             {
-                noise[i] = rand.Sample();
+                noise[i] = sample();
                 energyNoise += noise[i] * noise[i];
                 energySignal += signal[i] * signal[i];
             }
 
             double noiseMod = Math.Sqrt(energySignal / energyNoise / snr);
-            for (int i = 0; i < signal.Count; i++)
+			double ampAvg = 0.0;
+            for (int i = 0; i < signal.Count; i++) {
                 noise[i] = signal[i] + noise[i] * noiseMod;
+				ampAvg += Math.Abs(noise[i]);
+			}
+			ampAvg /= noise.Length;
+			for (int i = 0; i < noise.Length; i++)
+				noise[i] /= ampAvg;
             return noise;
         }
 
