@@ -1,8 +1,5 @@
-﻿using Avalonia.Utilities;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace MultipathSignal.Core
@@ -28,7 +25,13 @@ namespace MultipathSignal.Core
 			set => Frequency = Math.Tau / value;
 		}
 
-		public double GetNextSample() => Math.Sin(Phase += Frequency * Delta);
+		public double GetNextSample() {
+			Phase += Math.Tau * Frequency * Delta;
+			if (Phase > Math.Tau) 
+				Phase -= Math.Tau;
+			// if (Phase < -Math.PI) Phase += Math.Tau;
+			return Math.Sin(Phase);
+		}
 	}
 
 	internal class SignalModulator
@@ -38,12 +41,21 @@ namespace MultipathSignal.Core
 			/// On-Off Keying: amplitude shift keying with 2 states (1 bit)
 			/// </summary>
 			OOK,
+
+			/// <summary>
+			/// BPSK: binary phase shift keying (2 states - 1 bit) 
+			/// <br/>
+			/// NRZ variation (default)
+			/// </summary>
+			BPSK,
+
 			/// <summary>
 			/// BPSK: binary phase shift keying (2 states - 1 bit) 
 			/// <br/>
 			/// NRZI variation (flip on "1", no flip on "0")
 			/// </summary>
-			BPSK,
+			BPSK_I,
+
 			/// <summary>
 			/// BFSK: binary frequency shift keying (2 states - 1 bit) 
 			/// <br/>
@@ -71,26 +83,39 @@ namespace MultipathSignal.Core
 		{
 			Generator.Frequency = MainFrequency;
 
-			Func<bool, double> modfunc = Method switch 
-			{
-				Modulation.OOK => q => q ? 1.0 : 1.0 - Depth,
-
-				Modulation.BPSK => q => {
-					if (q) Generator.Phase += Math.PI;
-					return 1.0;
-				},
-				Modulation.FT => q => {
-					Generator.Frequency = MainFrequency * (q ? 1.0 + Depth : 1.0 - Depth);
-					return 1.0;
-				},
-				_ => throw new NotImplementedException(),
-			};
-
-			var signal = new List<double>();
-			foreach (var q in modul) {
-				double a = modfunc(q);
+			void m(double a, ref List<double> s) {
 				for (uint i = 0; i < BitLength * SignalGenerator.Samplerate; i++)
-					signal.Add(Generator.GetNextSample() * a);
+					s.Add(Generator.GetNextSample() * a);
+			}
+
+			List<double> signal = new();
+			switch (Method) {
+				case Modulation.OOK:
+					foreach (bool q in modul) 
+						m(q ? 1.0 : 1.0 - Depth, ref signal);
+					break;
+				
+				case Modulation.BPSK:
+					foreach (bool q in modul) {
+						if (q) Generator.Phase += Math.PI;
+						m(1.0, ref signal);
+						if (q) Generator.Phase -= Math.PI;
+					}
+					break;
+
+				case Modulation.BPSK_I:
+					foreach (bool q in modul) {
+						if (q) Generator.Phase += Math.PI;
+						m(1.0, ref signal);
+					}
+					break;
+
+				case Modulation.FT:
+					foreach (bool q in modul) {
+						Generator.Frequency = MainFrequency * (q ? 1.0 + Depth : 1.0 - Depth);
+						m(1.0, ref signal);
+					}
+					break;
 			}
 			return signal;
 		}

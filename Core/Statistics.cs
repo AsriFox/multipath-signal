@@ -67,5 +67,64 @@ namespace MultipathSignal.Core
                     gotitCount++;
             return (double)gotitCount / results2.Length;
         }
+        
+        public async Task<double> FindPredictedDelay(
+            double receiveDelay, 
+			double snrClean, 
+			double snrNoisy, 
+            bool useFft = true,
+			bool output = false)
+		{
+			SignalModulator gen = new() {
+				MainFrequency = this.MainFrequency,
+				BitRate = this.ModulationSpeed,
+				Method = this.ModulationType,
+				Depth = this.ModulationDepth
+            };
+
+			int bitDelay = (int) Math.Ceiling(receiveDelay * gen.BitRate);
+			var signal = await gen.ModulateAsync(
+				Utils.RandomBitSeq(
+					bitDelay + 2 * this.BitSeqLength + Utils.RNG.Next(bitDelay, this.BitSeqLength)));
+
+			int initDelay = (int)(bitDelay * SignalGenerator.Samplerate / this.ModulationSpeed);
+			var clearSignal = Utils.ApplyNoise(
+							  signal.Skip(initDelay)
+									.Take((int)(this.BitSeqLength * SignalGenerator.Samplerate / this.ModulationSpeed))
+									.ToList(),
+							  Math.Pow(10.0, 0.1 * snrClean));
+
+			signal = Utils.ApplyNoise(
+						 signal.Skip(initDelay - (int)(receiveDelay * SignalGenerator.Samplerate))
+							   .ToList(),
+						 Math.Pow(10.0, 0.1 * snrNoisy));
+
+			if (output)
+                this.RaiseStatusChanged("Signal generation is complete. Calculating correlation...");
+
+            var correl = useFft
+                ? await CorrelationFft.CalculateAsync(signal, clearSignal)
+                // ? await CorrelationOverlap.CalculateAsync(signal, clearSignal)
+                : await Correlation.CalculateAsync(signal, clearSignal);
+
+            // double correlMax = correl.Max();
+            // for (int i = 0; i < correl.Count; i++)
+            //     correl[i] /= correlMax;
+
+            int maxPos = 0;
+			double maxVal = 0.0;
+			for (int i = 0; i < correl.Count; i++)
+				if (Math.Abs(correl[i]) > maxVal) {
+					maxVal = Math.Abs(correl[i]);
+					maxPos = i;
+				}
+			double prediction = maxPos / SignalGenerator.Samplerate;
+            // if (useFft) prediction -= this.BitSeqLength / this.ModulationSpeed;
+
+			if (output)
+				this.RaisePlotDataReady(receiveDelay, clearSignal, signal, correl);
+
+			return prediction;
+		}
     }
 }
