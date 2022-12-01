@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -27,33 +28,32 @@ namespace MultipathSignal.Core
 			return result;
 		}
 
-		public static (IList<double>, IList<double>) Modulate(IList<bool> modul)
+		public static IList<Complex> Modulate(IList<bool> modul)
 		{
-			List<double> vi = new(), vq = new();
+			List<Complex> result = new();
 			void modulate(bool bi, bool bq) {
-				double ai = bi ? 1.0 : -1.0, aq = bq ? 1.0 : -1.0;
-				for (int i = 0; i < BitLength; i++) {
-					vi.Add(ai);
-					vq.Add(aq);
-				}
+				double ai = bi ? 1.0 : -1.0;
+				double aq = bq ? 1.0 : -1.0;
+				for (int i = 0; i < BitLength; i++) 
+					result.Add(new(ai, aq));
 			}
 
 			for (int j = 0; j + 1 < modul.Count; j += 2)
 				modulate(modul[j], modul[j + 1]);
 			if (modul.Count % 2 > 0)
 				modulate(modul[^1], false);
-			return (vi, vq);
+			return result;
 		}
 
 		/// <summary>
 		/// Modulate a bit sequence asynchronously.
 		/// Uses the default cancellation token.
 		/// </summary>
-		public static Task<(IList<double>, IList<double>)> ModulateGoldAsync(IList<bool> modul, string[] goldSeq) =>
+		public static Task<IList<Complex>> ModulateGoldAsync(IList<bool> modul, string[] goldSeq) =>
 			Task.Factory.StartNew(
 				args => {
 					if (args is not Tuple<IList<bool>, string[]> @aargs) 
-						return (Array.Empty<double>(), Array.Empty<double>());
+						return Array.Empty<Complex>();
 					return Modulate(Construct(aargs.Item1, aargs.Item2));
 				}, 
 				Tuple.Create(modul, goldSeq),

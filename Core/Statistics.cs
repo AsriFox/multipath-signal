@@ -1,23 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Numerics;
 using System.Threading.Tasks;
 
 namespace MultipathSignal.Core
 {
 	internal class Statistics
 	{
-		public static IList<double> Correlation(IList<double> bigarr, IList<double> smolar)
+		public static IList<Complex> Correlation(IList<Complex> bigarr, IList<Complex> smolar)
 		{
 			if (bigarr.Count < smolar.Count)
 				throw new ArgumentException("Place the bigger array in the first argument, please");
-			int n = bigarr.Count;
-			var result = new double[n - smolar.Count];
+			var result = new Complex[bigarr.Count];
 			Parallel.For(0, result.Length, k => {
-				double v = 0;
+				Complex v = 0;
 				for (int i = 0; i < smolar.Count; i++)
-					v += bigarr[i + k] * smolar[i];
+					v += bigarr[(i + k) % bigarr.Count] * smolar[i];
 				result[k] = v / smolar.Count;
 			});
 			return result;
@@ -27,10 +25,10 @@ namespace MultipathSignal.Core
 		/// Calculate the cross-correlation asynchronously.
 		/// Uses the default cancellation token.
 		/// </summary>
-		public static Task<IList<double>> CorrelationAsync(IList<double> bigarr, IList<double> smolar)=>
+		public static Task<IList<Complex>> CorrelationAsync(IList<Complex> bigarr, IList<Complex> smolar)=>
 			Task.Factory.StartNew(
 				args => {
-					if (args is not Tuple<IList<double>, IList<double>> arrs)
+					if (args is not Tuple<IList<Complex>, IList<Complex>> arrs)
 						throw new ArgumentException($"Expected a pair of arrays, got {args?.GetType()}", nameof(args));
 					return Correlation(arrs.Item1, arrs.Item2);
 				},
@@ -46,6 +44,9 @@ namespace MultipathSignal.Core
 		public double ModulationSpeed { get; set; } = 100.0;
 		public double ModulationDepth { get; set; } = 0.8;
 		public int BitSeqLength { get; set; } = 64;
+
+		public IList<Complex>[] Filters = new IList<Complex>[4];
+
 
 		//public double FindPredictedDelay(
 		//	double receiveDelay, 

@@ -263,7 +263,8 @@
             </StackPanel>
           </Expander>
 
-          <Expander HorizontalContentAlignment="Stretch">
+          <Expander HorizontalContentAlignment="Stretch"
+                    IsExpanded="True">
             <Expander.Header>
               <TextBlock Text="Research parameters" />
             </Expander.Header>
