@@ -22,14 +22,14 @@ namespace MultipathSignal.Views
 		public MainWindowViewModel()
 		{
 			Plots = new() {
-				new PlotViewModel() { Title = "Signals" },
-				new PlotViewModel() { Title = "Correlation", MinimumY = 0.0 },
-				new PlotViewModel() { Title = "Statistics", MinimumY = 0.0, MaximumY = 1.0 },
+				new PlotViewModel(2) { Title = "Signals" },
+				new PlotViewModel(2) { Title = "Correlation", MinimumY = 0.0 },
+				new PlotViewModel(1) { Title = "Statistics", MinimumY = 0.0, MaximumY = 1.0 },
 			};
-			Plots[0].CreateSeries(color: OxyColors.LightBlue);
-			Plots[0].CreateSeries(color: OxyColors.OrangeRed);
-			Plots[1].CreateSeries();
-			Plots[2].CreateSeries();
+			Plots[0].Series[0].Color = OxyColors.LightBlue;
+			Plots[0].Series[1].Color = OxyColors.OrangeRed;
+			Plots[1].Series[0].Color = OxyColors.LightBlue;
+			Plots[1].Series[1].Color = OxyColors.DarkBlue;
 			Plots.CollectionChanged += (_, _) => this.RaisePropertyChanged(nameof(Plots));
 		}
 
@@ -100,7 +100,18 @@ namespace MultipathSignal.Views
 				plots[1].Plotify(), 
 				plots[0].Plotify(delay)
 			);
-			Plots[1].AddDataPoint(plots[2].Plotify());
+
+			double ceil = plots[2].Max();
+			double threshold = 0.5 / ModulationSpeed;
+			var delayLimits = new double[(int)(2 * threshold * Samplerate)];
+			for (int t = 1; t < delayLimits.Length - 1; t++)
+				delayLimits[t] = ceil;
+
+			Plots[1].AddDataPoint(
+				plots[2].Plotify(),
+				delayLimits.Plotify(delay - threshold)
+			);
+			// Plots[1].MaximumX = plots[1].Count / Samplerate;
 			Status = "Procedure was completed. Ready.";
 		}
 

@@ -35,6 +35,17 @@ namespace MultipathSignal.Views
 			set => this.RaiseAndSetIfChanged(ref maximumY, value);
 		}
 
+		private double minimumX = double.NaN;
+		public double MinimumX {
+			get => minimumX;
+			set => this.RaiseAndSetIfChanged(ref minimumX, value);
+		}
+
+		private double maximumX = double.NaN;
+		public double MaximumX {
+			get => maximumX;
+			set => this.RaiseAndSetIfChanged(ref maximumX, value);
+		}
         #endregion
 
         public PlotViewModel()
@@ -43,7 +54,7 @@ namespace MultipathSignal.Views
 			Series.CollectionChanged += OnCollectionChanged;
 		}
 
-		public PlotViewModel(int seriesCount) : base()
+		public PlotViewModel(int seriesCount) : this()
 		{
 			for (int i = 0; i < seriesCount; i++)
 				this.CreateSeries();
@@ -135,13 +146,17 @@ namespace MultipathSignal.Views
 		{
 			switch (e.PropertyName) {
 				case nameof(MinimumY):
-				case nameof(maximumY):
+				case nameof(MaximumY):
+				case nameof(MinimumX):
+				case nameof(MaximumX):
 					break;
 				default:
 					return;
 			}
 
-			Model = new PlotModel();
+			// Model.Series.Clear();
+			// Model = new PlotModel();
+			Model.Axes.Clear();
 			Model.Axes.Add(
 				new LinearAxis { 
 					Position = AxisPosition.Left, 
@@ -149,8 +164,15 @@ namespace MultipathSignal.Views
 					Maximum = maximumY 
 				}
 			);
-			foreach (var s in Series)
-				Model.Series.Add(s);
+			Model.Axes.Add(
+				new LinearAxis { 
+					Position = AxisPosition.Bottom, 
+					Minimum = minimumX, 
+					Maximum = maximumX 
+				}
+			);
+			// foreach (var s in Series)
+			// 	Model.Series.Add(s);
 			this.RaisePropertyChanged(nameof(Model));
 		}
 
