@@ -71,52 +71,21 @@ namespace MultipathSignal.Views
 
 			SignalModulator.Samplerate = Samplerate;
 			SignalModulator.BitRate = ModulationSpeed;
-			Statistics stat = new();
-			for (int q = 0; q < 4; q++) {
-				stat.Filters[q] = SignalModulator.Modulate(
-					GoldSeq[q]
-						.Select(c => c == '1')
-						.ToArray()
-				);
-			}
+			Statistics stat = new() {
+				GoldSeq = GoldSeq
+			};
+			stat.StatusChanged += OnStatusChanged;
+			stat.PlotDataReady += OnPlotDataReady;
 
 			try {
 				switch (SimulationMode) {
 					case 0:     // Single test
 						Status = "Processing one signal...";
-						
-                        var x = await SignalModulator.ModulateGoldAsync(
-                                Utils.RandomBitSeq(BitSeqLength).ToArray(),
-                                GoldSeq);
-						
-						IList<double> ix = new double[x.Count];
-						IList<double> qx = new double[x.Count];
-						for (int i = 0; i < x.Count; i++) {
-							ix[i] = x[i].Real;
-							qx[i] = x[i].Imaginary;
-						}
-
-						var inx = Utils.ApplyNoise(ix, Math.Pow(10.0, 0.1 * SNRNoisy));
-						var qnx = Utils.ApplyNoise(qx, Math.Pow(10.0, 0.1 * SNRNoisy));
-						
-						var nx = new Complex[x.Count];
-						for (int i = 0; i < x.Count; i++)
-							nx[i] = new(inx[i], qnx[i]);
-
-						var correl = new IList<Complex>[4];
-						for (int q = 0; q < 4; q++)
-							correl[q] = Statistics.Correlation(nx, stat.Filters[q]);
-
-						var corabs = new IList<double>[4];
-						for (int q = 0; q < 4; q++)
-							corabs[q] = correl[q].Select(v => v.Magnitude).ToArray();
-
-                        await Dispatcher.UIThread.InvokeAsync(() => {
-							OnPlotDataReady(0, inx, ix);
-							OnPlotDataReady(1, qnx, qx);
-							OnPlotDataReady(2, corabs);
-						});
-                        this.RaisePropertyChanged(nameof(Plots));
+						await stat.EncodeDecodeAsync(
+							Utils.RandomBitSeq(BitSeqLength).ToArray(),
+							SNRNoisy,
+							true
+						);
 						break;
 					case 1:
 						break;

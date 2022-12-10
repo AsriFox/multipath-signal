@@ -22,9 +22,12 @@ namespace MultipathSignal.Core
 			for (int k = 0; k + 1 < modul.Count; k += 2) {
 				int bb = modul[k] ? (modul[k + 1] ? 3 : 2) : (modul[k + 1] ? 1 : 0);
 				result.AddRange(goldSeq[bb].Select(c => c == '1'));
+				result.Add(false);	// even bit count
 			}
-			if (modul.Count % 2 > 0)
+			if (modul.Count % 2 > 0){
 				result.AddRange(goldSeq[modul[^1] ? 2 : 0].Select(c => c == '1'));
+				result.Add(false);	// even bit count
+			}
 			return result;
 		}
 

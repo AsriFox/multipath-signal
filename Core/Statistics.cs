@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
 
@@ -15,7 +16,7 @@ namespace MultipathSignal.Core
 			Parallel.For(0, result.Length, k => {
 				Complex v = 0;
 				for (int i = 0; i < smolar.Count; i++)
-					v += bigarr[(i + k) % bigarr.Count] * smolar[i];
+					v += bigarr[(i + k) % bigarr.Count] * Complex.Conjugate(smolar[i]);
 				result[k] = v / smolar.Count;
 			});
 			return result;
@@ -38,77 +39,85 @@ namespace MultipathSignal.Core
 				TaskScheduler.Default);
 
 		public event Action<string>? StatusChanged;
-		public event Action<IList<double>, IList<double>, IList<double>>? PlotDataReady;
+		public event Action<int, IList<double>[]>? PlotDataReady;
 
-		public double MainFrequency { get; set; } = 1000.0;
-		public double ModulationSpeed { get; set; } = 100.0;
-		public double ModulationDepth { get; set; } = 0.8;
-		public int BitSeqLength { get; set; } = 64;
+		public string[] GoldSeq = new string[4];
 
-		public IList<Complex>[] Filters = new IList<Complex>[4];
+		public IList<bool> EncodeDecode(
+			bool[] message,
+			double snr,
+			bool output = false)
+		{
+			var task = SignalModulator.ModulateGoldAsync(message, GoldSeq);
+			task.Wait();
+			var signal = task.Result;
+			var filters = GoldSeq.Select(
+				seq => SignalModulator.Modulate(
+					seq.Select(c => c == '1').ToArray()
+				)
+			).ToArray();
 
+			signal = Utils.ApplyNoise(signal, Math.Pow(10.0, 0.1 * snr));
+			if (output)
+				StatusChanged?.Invoke("Signal generation complete. Calculating correlation...");
 
-		//public double FindPredictedDelay(
-		//	double receiveDelay, 
-		//	double snrClean, 
-		//	double snrNoisy, 
-		//	bool output = false)
-		//{
-		//	int bitDelay = (int) Math.Ceiling(receiveDelay / ModulationSpeed);
-		//	var task = gen.ModulateAsync(
-		//		Utils.RandomBitSeq(
-		//			bitDelay + BitSeqLength + Utils.RNG.Next(bitDelay, BitSeqLength)));
-		//	task.Wait();
-		//	var signal = task.Result;
+			var correl = new IList<Complex>[GoldSeq.Length];
+			Parallel.For(0, GoldSeq.Length, k => {
+				correl[k] = Correlation(signal, filters[k]);
+			});
 
-		//	int initDelay = (int)(bitDelay * SignalGenerator.Samplerate / ModulationSpeed);
-		//	var clearSignal = //NoiseGenerator.Apply(
-		//					  signal.Skip(initDelay)
-		//							.Take((int)(BitSeqLength * SignalGenerator.Samplerate / ModulationSpeed))
-		//							.ToList();
-		//	//Math.Pow(10.0, 0.1 * snrClean));
+			int length = signal.Count;
+			int bitLength = (int)SignalModulator.BitLength * 16;
+			List<int> bitSel = new();
+			for (int t = bitLength / -2; t < length; t += bitLength) {
+				var max = new double[4];
+				for (int i = t; i < t + bitLength; i++) {
+					for (int k = 0; k < 4; k++) {
+						max[k] = Math.Max(
+							max[k], 
+							correl[k][(i + length) % length].Magnitude
+						);
+					}
+				}
+				int m = 0;
+				for (int i = 1; i < 4; i++)
+					if (max[m] < max[i])
+						m = i;
+				bitSel.Add(m);
+			}
+			
+			List<bool> result = new();
+			foreach (var m in bitSel) {
+				result.Add(m / 2 > 0);
+				result.Add(m % 2 > 0);
+			}
+			
+			if (output) {
+				string orig = new(message.Select(b => b ? '1' : '0').ToArray());
+				string res = new(result.Select(b => b ? '1' : '0').ToArray());
+				StatusChanged?.Invoke(
+					$"Message received: {res}; original: {orig}"
+				);
+			}
 
-		//	signal = //NoiseGenerator.Apply(
-		//				 signal.Skip(initDelay - (int)(receiveDelay * SignalGenerator.Samplerate))
-		//					   .ToList();
-		//				 //Math.Pow(10.0, 0.1 * snrNoisy));
-
-		//	if (output)
-		//		StatusChanged?.Invoke("Signal generation is complete. Calculating correlation...");
-
-		//	task = CorrelationAsync(signal, clearSignal);
-		//	task.Wait();
-		//	var correl = task.Result;
-
-		//	int maxPos = 0;
-		//	double maxVal = 0.0;
-		//	for (int i = 0; i < correl.Count; i++)
-		//		if (Math.Abs(correl[i]) > maxVal) {
-		//			maxVal = Math.Abs(correl[i]);
-		//			maxPos = i;
-		//		}
-		//	var prediction = maxPos / SignalGenerator.Samplerate;
-
+			return result;
+		}
 		//	if (output)
 		//		PlotDataReady?.Invoke(clearSignal, signal, correl);
 
-		//	return prediction;
-		//}
-
-		//public Task<double> FindPredictedDelayAsync(
-		//	double receiveDelay,
-		//	double snrClean,
-		//	double snrNoisy,
-		//	bool output = false) =>
-		//	Task.Factory.StartNew(
-		//		args => {
-		//			if (args is not Tuple<double, double, double, bool> @params)
-		//				throw new ArgumentException($"Expected three 'double' and a 'bool', got {args?.GetType()}", nameof(args));
-		//			return FindPredictedDelay(@params.Item1, @params.Item2, @params.Item3, @params.Item4);
-		//		},
-		//		Tuple.Create(receiveDelay, snrClean, snrNoisy, output),
-		//		Utils.Cancellation.Token,
-		//		TaskCreationOptions.None,
-		//		TaskScheduler.Default);
+		public Task<IList<bool>> EncodeDecodeAsync(
+			bool[] signal,
+			double snr,
+			bool output = false) =>
+			Task.Factory.StartNew(
+				args => {
+					if (args is not Tuple<bool[], double, bool> @params)
+						throw new ArgumentException("Wrong arguments set", nameof(args));
+					return EncodeDecode(@params.Item1, @params.Item2, @params.Item3);
+				},
+				Tuple.Create(signal, snr, output),
+				Utils.Cancellation.Token,
+				TaskCreationOptions.None,
+				TaskScheduler.Default);
 	}
 }

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using MathNet.Numerics.Random;
 
 namespace MultipathSignal.Core
@@ -15,19 +16,22 @@ namespace MultipathSignal.Core
 			return result;
 		}
 
-		public static IList<double> ApplyNoise(IList<double> signal, double snr)
+		public static IList<Complex> ApplyNoise(IList<Complex> signal, double snr)
 		{
             if (signal.Count <= 0)
-                return System.Array.Empty<double>();
+                return System.Array.Empty<Complex>();
 
 			MathNet.Numerics.Distributions.Normal rand = new(new MersenneTwister(true));
-            var noise = new double[signal.Count];
+            var noise = new Complex[signal.Count];
             double energyNoise = 0.0, energySignal = 0.0;
             for (int i = 0; i < signal.Count; i++) 
-			{
-                noise[i] = rand.Sample();
-                energyNoise += noise[i] * noise[i];
-                energySignal += signal[i] * signal[i];
+			{ 
+                noise[i] = Complex.FromPolarCoordinates(
+					rand.Sample(), 
+					System.Math.Tau * rand.Sample()
+				);
+                energyNoise += noise[i].Magnitude * noise[i].Magnitude;
+                energySignal += signal[i].Magnitude * signal[i].Magnitude;
             }
 
             double noiseMod = System.Math.Sqrt(energySignal / energyNoise / snr);
