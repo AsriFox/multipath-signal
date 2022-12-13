@@ -68,6 +68,7 @@ namespace MultipathSignal.Views
 			SignalModulator.Samplerate = Samplerate;
 			SignalModulator.BitRate = ModulationSpeed;
 			Statistics stat = new() {
+				BitSeqLength = BitSeqLength,
 				GoldSeq = GoldSeq
 			};
 			stat.StatusChanged += OnStatusChanged;
@@ -77,15 +78,24 @@ namespace MultipathSignal.Views
 				switch (SimulationMode) {
 					case 0:     // Single test
 						Status = "Processing one signal...";
-						await stat.EncodeDecodeAsync(
-							Utils.RandomBitSeq(BitSeqLength).ToArray(),
-							SNRNoisy,
-							true
-						);
+						await stat.EncodeDecode(SNRNoisy, true);
 						break;
 					case 1:
+						Status = "Processing multiple signals...";
+						await stat.ProcessMultiple(SNRNoisy, TestsRepeatCount);
 						break;
 					case 2:
+						Plots[2].Clear();
+						double snr = SNRNoisy;
+						double snrMax = SNRNoisyMax + 0.5 * SNRNoisyStep;
+						while (snr < snrMax) {
+							if (Utils.Cancellation.IsCancellationRequested) break;
+							Status = $"Processing signals with SNR = {snr} db...";
+							double ber = await stat.ProcessMultiple(snr, TestsRepeatCount);
+							Plots[2].AppendTo(0, new DataPoint(snr, ber));
+							SNRShown = snr;
+							snr += SNRNoisyStep;
+						}
 						break;
 				}
 			}
@@ -93,74 +103,6 @@ namespace MultipathSignal.Views
 				Status = "Operation was cancelled.";
 				Utils.Cancellation = new();
 			}
-
-			//SignalGenerator.Samplerate = Samplerate;
-			//Statistics stat = new() {
-			//	MainFrequency = MainFrequency,
-			//	ModulationSpeed = ModulationSpeed,
-			//	ModulationType = ModulationType,
-			//	ModulationDepth = ModulationDepth
-			//};
-			//stat.StatusChanged += OnStatusChanged;
-
-			//try { 
-			//	switch (SimulationMode) {
-			//		case 0:     // Single test
-			//			Status = "Processing one signal...";
-			//			PredictedDelay = await stat.FindPredictedDelayAsync(ReceiveDelay, SNRClean, SNRNoisy, true);
-			//			break;
-
-			//		case 1:     // Multiple tests
-			//			Status = "Processing signals...";
-			//			var stopw = new Stopwatch();
-			//			stopw.Start();
-			//			var tasks = Enumerable.Range(0, TestsRepeatCount)
-			//								.Select(_ => stat.FindPredictedDelayAsync(ReceiveDelay, SNRClean, SNRNoisy))
-			//								.ToList();
-			//			tasks.Add(stat.FindPredictedDelayAsync(ReceiveDelay, SNRClean, SNRNoisy, true));
-
-			//			var results = await Task.WhenAll(tasks);
-			//			PredictedDelay = results.Sum() / results.Length;
-
-			//			stopw.Stop();
-			//			Status = $"{TestsRepeatCount} tasks were completed in {stopw.Elapsed.TotalSeconds:F2} s. Ready.";
-			//			break;
-
-			//		case 2:     // Gather statistics
-			//			Plots[3].ReplacePointsOf(0, new List<DataPoint>());
-			//			double snr = SNRNoisy;
-			//			double snrMax = SNRNoisyMax + 0.5 * SNRNoisyStep;
-			//			double threshold = 0.5 / ModulationSpeed;
-			//			while (snr < snrMax) {
-			//				if (Utils.Cancellation.IsCancellationRequested) break;
-
-			//				Status = $"Processing signals with SNR = {snr:F2} dB";
-			//				var actualDelays = new List<double>();
-			//				var tasks2 = new List<Task<double>>();
-			//				for (int i = 0; i < TestsRepeatCount; i++) {
-			//					double delay = ReceiveDelay * 2.0 * Utils.RNG.NextDouble();
-			//					actualDelays.Add(delay);
-			//					tasks2.Add(stat.FindPredictedDelayAsync(delay, SNRClean, snr));
-			//				}
-			//				actualDelays.Add(ReceiveDelay * 2.0 * Utils.RNG.NextDouble());
-			//				tasks2.Add(stat.FindPredictedDelayAsync(actualDelays.Last(), SNRClean, snr, true));
-
-			//				var results2 = await Task.WhenAll(tasks2);
-			//				int gotitCount = 0;
-			//				for (int i = 0; i < results2.Length; i++)
-			//					if (Math.Abs(results2[i] - actualDelays[i]) < threshold)
-			//						gotitCount++;
-
-			//				Plots[3].PointsOf(0).Add(new DataPoint(snr, (double)gotitCount / results2.Length));
-			//				snr += SNRNoisyStep;
-			//			}
-			//			break;
-			//	}
-			//}
-			//catch (TaskCanceledException) {
-			//	Status = "Operation was cancelled.";
-			//	Utils.Cancellation = new();
-			//}
 			EditMode = true;
 		}
 
@@ -235,6 +177,17 @@ namespace MultipathSignal.Views
 		public bool EditMode { 
 			get => editMode;
 			set => this.RaiseAndSetIfChanged(ref editMode, value);
+		}
+
+		private double snrShown = 0.0;
+		public double SNRShown {
+			get => snrShown;
+			set {
+				this.RaiseAndSetIfChanged(ref snrShown, value);
+				int sel = (int)((snrShown - SNRNoisy) / SNRNoisyStep);
+				foreach (var plot in Plots)
+					plot.SelectDataPoint(sel);
+			}
 		}
 	}
 }

@@ -264,15 +264,7 @@
               <TextBlock Text="Research parameters" />
             </Expander.Header>
             <StackPanel>
-              <local:NumberBox Header="SNR for clean, dB"
-                               Format="{}{0:F2}"
-                               Step="1"
-                               Value="{Binding SNRClean, Mode=TwoWay}"
-                               PointerEnter="PointerMoveFocus"
-                               Grid.Column="1"
-                               Grid.Row="0" />
-
-              <local:NumberBox Header="SNR for noisy, dB"
+              <local:NumberBox Header="SNR minimum, dB"
                                Format="{}{0:F2}"
                                Step="1"
                                Value="{Binding SNRNoisy, Mode=TwoWay}"

@@ -92,6 +92,12 @@ namespace MultipathSignal.Views
                 ReplacePointsOf(i, points[i]);
         }
 
+		public void AppendTo(int i, DataPoint p) {
+			Series[i].Points.Add(p);
+			Model.InvalidatePlot(true);
+			this.RaisePropertyChanged(nameof(Model));
+		}
+
         #endregion
 
         #region Points history

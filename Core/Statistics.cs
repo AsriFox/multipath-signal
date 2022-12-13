@@ -14,15 +14,28 @@ namespace MultipathSignal.Core
 
 		public string[] GoldSeq = new string[4];
 
-		public IList<bool> EncodeDecode(
-			bool[] message,
-			double snr,
-			bool output = false)
-		{
-			var task = SignalModulator.ModulateGoldAsync(message, GoldSeq);
-			task.Wait();
-			var signal = task.Result;
+		public int BitSeqLength = 2;
 
+		public async Task<double> ProcessMultiple(double snr, int testsRepeatCount) {
+			var stopw = new System.Diagnostics.Stopwatch();
+			stopw.Start();
+			var tasks = new Task<double>[testsRepeatCount + 1];
+			for (int i = 0; i < testsRepeatCount; i++)
+				tasks[i + 1] = this.EncodeDecode(snr);
+			tasks[0] = this.EncodeDecode(snr, true);
+
+			var results = await Task.WhenAll(tasks);
+			double berAvg = results.Sum() / results.Length;
+
+            StatusChanged?.Invoke($"{testsRepeatCount} tasks were completed in {stopw.Elapsed.TotalSeconds:F2} s. Average BER: {berAvg}");
+            return berAvg;
+		}
+
+		public async Task<double> EncodeDecode(double snr, bool output = false)
+		{
+			var message = Utils.RandomBitSeq(BitSeqLength).ToArray();
+			var signal = await SignalModulator.ModulateGoldAsync(message, GoldSeq);
+			
 			var filters = GoldSeq.Select(
 				seq => SignalModulator.Modulate(
 					seq.Select(c => c == '1').ToArray()
@@ -45,9 +58,9 @@ namespace MultipathSignal.Core
 			}
 			signal = noisySignal;
 
-			var correl = new IList<Complex>[GoldSeq.Length];
-			for (int k = 0; k < GoldSeq.Length; k++)
-				correl[k] = CorrelationOverlap.Calculate(signal, filters[k]);
+			var correl = filters.Select(
+				f => CorrelationOverlap.Calculate(signal, f)
+			).ToArray();
 
 			if (output)
 				PlotDataReady?.Invoke(1,
@@ -78,40 +91,16 @@ namespace MultipathSignal.Core
 				result.Add(m / 2 > 0);
 				result.Add(m % 2 > 0);
 			}
-			
-			if (output) {
-				string orig = "", res = "";
-				int errc = 0;
-				for (int i = 0; i < message.Length; i++) {
-					orig += message[i] ? '1' : '0';
-					res += result[i] ? '1' : '0';
-					if (message[i] != result[i])
-						errc++;
-				}
-				double ber = (double)errc / message.Length;
-				StatusChanged?.Invoke(
-					$"BER: {ber}, Message: {res}; original: {orig}"
-				);
-			}
 
-			return result;
+			int errc = 0;
+			for (int i = 0; i < message.Length; i++)
+				if (message[i] != result[i])
+					errc++;
+			double ber = (double)errc / message.Length;
+
+			if (output)
+				StatusChanged?.Invoke($"Simulation completed. BER: {ber}");
+			return ber;
 		}
-		//	if (output)
-		//		PlotDataReady?.Invoke(clearSignal, signal, correl);
-
-		public Task<IList<bool>> EncodeDecodeAsync(
-			bool[] signal,
-			double snr,
-			bool output = false) =>
-			Task.Factory.StartNew(
-				args => {
-					if (args is not Tuple<bool[], double, bool> @params)
-						throw new ArgumentException("Wrong arguments set", nameof(args));
-					return EncodeDecode(@params.Item1, @params.Item2, @params.Item3);
-				},
-				Tuple.Create(signal, snr, output),
-				Utils.Cancellation.Token,
-				TaskCreationOptions.None,
-				TaskScheduler.Default);
 	}
 }
