@@ -27,16 +27,12 @@ namespace MultipathSignal.Views
 		public MainWindowViewModel()
 		{
 			Plots = new() {
-				new PlotViewModel(2) { Title = "Modulated signal, I-component" },
-				new PlotViewModel(2) { Title = "Modulated signal, Q-component" },
+				new PlotViewModel(2) { Title = "Modulated signal" },
 				new PlotViewModel(4) { Title = "Filtered responses to signal" },
 				new PlotViewModel(1) { Title = "Statistics", MinimumY = 0.0 },
 			};
-
-			Plots[0].Series[0].Color = OxyColors.LightSalmon;
-			Plots[0].Series[1].Color = OxyColors.OrangeRed;
-			Plots[1].Series[0].Color = OxyColors.LightBlue;
-			Plots[1].Series[1].Color = OxyColors.DarkBlue;	
+			Plots[0].Series[0].Color = OxyColors.LightBlue;
+			Plots[0].Series[1].Color = OxyColors.DarkBlue;	
 
             Plots.CollectionChanged += (_, _) => this.RaisePropertyChanged(nameof(Plots));
 
@@ -185,7 +181,14 @@ namespace MultipathSignal.Views
 
 		public void OnPlotDataReady(int where, params IList<double>[] values)
 		{
-			Plots[where].ReplacePointsWith(values.Select(v => v.Plotify()).ToArray());
+			Dispatcher.UIThread.InvokeAsync(
+				() => Plots[where]
+					.ReplacePointsWith(
+						values
+							.Select(v => v.Plotify())
+							.ToArray()
+					)
+			);
 		}
 
 		#region Modulation parameters
