@@ -51,24 +51,26 @@
     
     <Grid Name="ActionButtons" 
           DockPanel.Dock="Bottom" 
-          ColumnDefinitions="*,*">
+          ColumnDefinitions="Auto,*">
+
+      <ToggleButton Name="ToggleUseFft" 
+                    Content="Use FFT (Overlap-Add)"
+                    Grid.Column="0"
+                    IsEnabled="{Binding EditMode}"
+                    IsChecked="{Binding UseFFT, Mode=TwoWay}"
+                    PointerEnter="PointerMoveFocus" />
       
       <Button Content="Launch the simulation" 
               Command="{Binding Process}" 
-              Grid.Column="0"
+              Grid.Column="1"
               IsVisible="{Binding EditMode}"
               PointerEnter="PointerMoveFocus" />
 
       <Button Content="Stop the simulation"
               Command="{Binding StopProcess}"
-              Grid.Column="0"
+              Grid.Column="1"
               IsVisible="{Binding !EditMode}"
               PointerEnter="PointerMoveFocus" />
-              
-      <ToggleButton Name="ToggleShowCorrel" 
-                    Content="Show correlation"
-                    Grid.Column="1"
-                    PointerEnter="PointerMoveFocus" />
     </Grid>
 
     <DockPanel Name="SliderBar"

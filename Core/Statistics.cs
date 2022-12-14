@@ -10,19 +10,19 @@ namespace MultipathSignal.Core
 	{
 		
 		public event Action<string>? StatusChanged;
-		public event Action<int, IList<double>[]>? PlotDataReady;
+		public event Action<IList<double>[]>? PlotDataReady;
 
 		public string[] GoldSeq = new string[4];
 
 		public int BitSeqLength = 2;
 
-		public async Task<double> ProcessMultiple(double snr, int testsRepeatCount) {
+		public async Task<double> ProcessMultiple(double snr, int testsRepeatCount, bool useFft = true) {
 			var stopw = new System.Diagnostics.Stopwatch();
 			stopw.Start();
 			var tasks = new Task<double>[testsRepeatCount + 1];
 			for (int i = 0; i < testsRepeatCount; i++)
 				tasks[i + 1] = this.EncodeDecode(snr);
-			tasks[0] = this.EncodeDecode(snr, true);
+			tasks[0] = this.EncodeDecode(snr, useFft, true);
 
 			var results = await Task.WhenAll(tasks);
 			double berAvg = results.Sum() / results.Length;
@@ -31,7 +31,7 @@ namespace MultipathSignal.Core
             return berAvg;
 		}
 
-		public async Task<double> EncodeDecode(double snr, bool output = false)
+		public async Task<double> EncodeDecode(double snr, bool useFft = true, bool output = false)
 		{
 			var message = Utils.RandomBitSeq(BitSeqLength).ToArray();
 			var signal = await SignalModulator.ModulateGoldAsync(message, GoldSeq);
@@ -43,33 +43,34 @@ namespace MultipathSignal.Core
 			).ToArray();
 
 			var noisySignal = Utils.ApplyNoise(signal, Math.Pow(10.0, 0.1 * snr));
-			if (output) {
-				StatusChanged?.Invoke("Signal generation complete. Calculating correlation...");
-				PlotDataReady?.Invoke(0,
-					new IList<double>[] {
-						noisySignal
-							.Select(c => c.Phase)
-							.ToArray(),
-						signal
-							.Select(c => c.Phase)
-							.ToArray(),
-					}
-				);
-			}
-			signal = noisySignal;
-
-			var correl = filters.Select(
-				f => CorrelationOverlap.Calculate(signal, f)
-			).ToArray();
-
 			if (output)
-				PlotDataReady?.Invoke(1,
-					correl
-						.Select(cl => cl
-							.Select(c => c.Magnitude)
-							.ToArray()
-						).ToArray()
-				);
+				StatusChanged?.Invoke("Signal generation complete. Calculating correlation...");
+
+			var correl = useFft
+				? filters.Select(
+					f => CorrelationOverlap.Calculate(noisySignal, f)
+				).ToArray()
+				: filters.Select(
+					f => Correlation.Calculate(noisySignal, f)
+				).ToArray();
+
+			if (output) {
+				var plots = correl
+					.Select(cl => cl
+						.Select(c => c.Magnitude)
+						.ToArray()
+						as IList<double>
+					).ToList();
+					
+				plots.Add(noisySignal
+					.Select(c => c.Phase)
+					.ToArray());
+				plots.Add(signal
+					.Select(c => c.Phase)
+					.ToArray());
+				
+				PlotDataReady?.Invoke(plots.ToArray());
+			}
 
 			int length = signal.Count;
 			int bitLength = (int)SignalModulator.BitLength * 16;

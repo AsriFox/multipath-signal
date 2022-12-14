@@ -21,14 +21,14 @@ namespace MultipathSignal.Core
             if (signal.Count <= 0)
                 return System.Array.Empty<Complex>();
 
-			MathNet.Numerics.Distributions.Normal rand = new(new MersenneTwister(true));
+			MersenneTwister rand = new(true);
             var noise = new Complex[signal.Count];
             double energyNoise = 0.0, energySignal = 0.0;
             for (int i = 0; i < signal.Count; i++) 
 			{ 
                 noise[i] = Complex.FromPolarCoordinates(
-					rand.Sample(), 
-					System.Math.Tau * rand.Sample()
+					rand.NextDouble(), 
+					System.Math.Tau * rand.NextDouble()
 				);
                 energyNoise += noise[i].Magnitude * noise[i].Magnitude;
                 energySignal += signal[i].Magnitude * signal[i].Magnitude;

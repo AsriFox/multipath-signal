@@ -62,6 +62,8 @@ namespace MultipathSignal.Views
 		{
 			EditMode = false;
 
+			foreach (var p in Plots) p.Clear();
+
 			if (GoldSeq.Any(s => s is null || s.Length == 0)) 
 				await GenerateGoldSequences();
 
@@ -78,21 +80,21 @@ namespace MultipathSignal.Views
 				switch (SimulationMode) {
 					case 0:     // Single test
 						Status = "Processing one signal...";
-						await stat.EncodeDecode(SNRNoisy, true);
+						await stat.EncodeDecode(SNRNoisy, UseFFT, true);
 						break;
 					case 1:
 						Status = "Processing multiple signals...";
-						await stat.ProcessMultiple(SNRNoisy, TestsRepeatCount);
+						await stat.ProcessMultiple(SNRNoisy, TestsRepeatCount, UseFFT);
 						break;
 					case 2:
-						Plots[2].Clear();
 						double snr = SNRNoisy;
 						double snrMax = SNRNoisyMax + 0.5 * SNRNoisyStep;
 						while (snr < snrMax) {
 							if (Utils.Cancellation.IsCancellationRequested) break;
 							Status = $"Processing signals with SNR = {snr} db...";
-							double ber = await stat.ProcessMultiple(snr, TestsRepeatCount);
+							double ber = await stat.ProcessMultiple(snr, TestsRepeatCount, UseFFT);
 							Plots[2].AppendTo(0, new DataPoint(snr, ber));
+							Status = $"BER: {ber}";
 							SNRShown = snr;
 							snr += SNRNoisyStep;
 						}
@@ -121,15 +123,22 @@ namespace MultipathSignal.Views
 
         public void OnStatusChanged(string status) => Status = status;
 
-		public void OnPlotDataReady(int where, params IList<double>[] values)
+		public void OnPlotDataReady(params IList<double>[] values)
 		{
 			Dispatcher.UIThread.InvokeAsync(
-				() => Plots[where]
-					.ReplacePointsWith(
-						values
-							.Select(v => v.Plotify())
-							.ToArray()
-					)
+				() => {
+					Status = "Data generated. Plotting...";
+					Plots[0].AddDataPoint(
+						values[4].Plotify(),
+						values[5].Plotify()
+					);
+					Plots[1].AddDataPoint(
+						values[0].Plotify(),
+						values[1].Plotify(),
+						values[2].Plotify(),
+						values[3].Plotify()
+					);
+				}
 			);
 		}
 
@@ -147,11 +156,17 @@ namespace MultipathSignal.Views
 
 		public int SimulationMode { get; set; } = 0;
 
-		public double SNRClean { get; set; } = 10.0;
+		private double snrNoisy = -10.0;
+		public double SNRNoisy { 
+			get => snrNoisy;
+			set => this.RaiseAndSetIfChanged(ref snrNoisy, value);
+		}
 
-		public double SNRNoisy { get; set; } = -10.0;
-
-		public double SNRNoisyMax { get; set; } = 10.0;
+		private double snrNoisyMax = 10.0;
+		public double SNRNoisyMax {
+			get => snrNoisyMax;
+			set => this.RaiseAndSetIfChanged(ref snrNoisyMax, value);
+		}
 
 		public double SNRNoisyStep { get; set; } = 1.0;
 
@@ -179,6 +194,11 @@ namespace MultipathSignal.Views
 			set => this.RaiseAndSetIfChanged(ref editMode, value);
 		}
 
+		private bool useFft = true;
+		public bool UseFFT { 
+			get => useFft;
+			set => this.RaiseAndSetIfChanged(ref useFft, value);
+		}
 		private double snrShown = 0.0;
 		public double SNRShown {
 			get => snrShown;
