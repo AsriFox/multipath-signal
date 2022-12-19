@@ -19,13 +19,22 @@ namespace MultipathSignal.Views
 		public MainWindowViewModel()
 		{
 			Plots = new() {
-				new PlotViewModel(1) { Title = "Clean signal", MinimumY = -Math.PI, MaximumY = Math.PI },
-				new PlotViewModel(2) { Title = "Dirty signal" },
-				new PlotViewModel(1) { Title = "Statistics", MinimumY = 0.0, MaximumY = 1.0 },
+				new PlotViewModel { Title = "Clean signal: I", MinimumY = -1, MaximumY = 1 },
+				new PlotViewModel { Title = "Clean signal: Q", MinimumY = -1, MaximumY = 1 },
+				new PlotViewModel { Title = "Dirty signal: I", MinimumY = -1, MaximumY = 1 },
+				new PlotViewModel { Title = "Dirty signal: Q", MinimumY = -1, MaximumY = 1 },
+				new PlotViewModel { Title = "Statistics", MinimumY = 0.0, MaximumY = 1.0 },
 			};
-			Plots[0].Series[0].Color = OxyColors.ForestGreen;
-			Plots[1].Series[0].Color = OxyColors.LightSalmon;
-			Plots[1].Series[1].Color = OxyColors.DarkBlue;
+			Plots[0].CreateSeries(null, OxyColors.DarkBlue);
+			Plots[1].CreateSeries(null, OxyColors.DarkBlue);
+			Plots[2].CreateSeries(null, OxyColors.OrangeRed);
+			Plots[2].BackdropSeries = new OxyPlot.Series.AreaSeries {
+				Fill = OxyColors.LightSalmon,
+			};
+			Plots[3].CreateSeries(null, OxyColors.OrangeRed);
+			Plots[3].BackdropSeries = new OxyPlot.Series.AreaSeries {
+				Fill = OxyColors.LightSalmon,
+			};
 			Plots.CollectionChanged += (_, _) => this.RaisePropertyChanged(nameof(Plots));
 		}
 
@@ -97,26 +106,59 @@ namespace MultipathSignal.Views
 				Frequency = MainFrequency,
 				Phase = 0.0,
 			};
-			var cleanSignal = new double[plots[0].Count];
-			for (int i = 0; i < cleanSignal.Length; i++) {
+			double max = plots[0].Max(c => c.Magnitude);
+			var cleanSignalI = new double[plots[0].Count];
+			var cleanSignalQ = new double[plots[0].Count];
+			for (int i = 0; i < plots[0].Count; i++) {
 				var c = plots[0][i] / g.GetNextSample();
-				cleanSignal[i] = c.Phase;
+				cleanSignalI[i] = c.Real;
+				cleanSignalQ[i] = c.Imaginary;
 			}
-			Plots[0].AddDataPoint(cleanSignal.Plotify());
+			Plots[0].AddDataPoint(cleanSignalI.Plotify());
+			Plots[1].AddDataPoint(cleanSignalQ.Plotify());
+			Plots[0].MaximumY = max;
+			Plots[0].MinimumY = -max;
+			Plots[1].MaximumY = max;
+			Plots[1].MinimumY = -max;
 
 			g.Phase = 0.0;
-			var dirtySignal = new double[plots[1].Count];
-			for (int i = 0; i < dirtySignal.Length; i++) {
+			max = plots[1].Max(c => c.Magnitude);
+			var dirtySignalI = new double[plots[1].Count];
+			var dirtySignalQ = new double[plots[1].Count];
+			for (int i = 0; i < plots[1].Count; i++) {
 				var c = plots[1][i] / g.GetNextSample();
-				dirtySignal[i] = c.Phase;
+				dirtySignalI[i] = c.Real;
+				dirtySignalQ[i] = c.Imaginary;
 			}
-			Plots[1].AddDataPoint(
-				dirtySignal.Plotify(),
-				new DataPoint[] {
-					new(delay, -Math.PI),
-					new(delay, Math.PI)
-				}
-			);
+			Plots[2].AddDataPoint(dirtySignalI.Plotify());
+			Plots[3].AddDataPoint(dirtySignalQ.Plotify());
+			Plots[2].MaximumY = max;
+			Plots[2].MinimumY = -max;
+			Plots[3].MaximumY = max;
+			Plots[3].MinimumY = -max;
+
+			double signalDuration = BitSeqLength / ModulationSpeed;
+			if (ModulationType == SignalModulator.Modulation.MSK) 
+				signalDuration *= 0.5; 
+			OxyPlot.Series.AreaSeries bs1 = new() {
+				Color = OxyColors.SteelBlue
+			};
+			bs1.Points.Add(new(delay, -2 * max));
+			bs1.Points.Add(new(delay, 2 * max));
+			bs1.Points.Add(new(delay + signalDuration, 2 * max));
+			bs1.Points.Add(new(delay + signalDuration, -2 * max));
+			bs1.ConstantY2 = -2 * max;
+			Plots[2].BackdropSeries = bs1;
+
+			OxyPlot.Series.AreaSeries bs2 = new() {
+				Color = OxyColors.SteelBlue
+			};
+			bs2.Points.Add(new(delay, -2 * max));
+			bs2.Points.Add(new(delay, 2 * max));
+			bs2.Points.Add(new(delay + signalDuration, 2 * max));
+			bs2.Points.Add(new(delay + signalDuration, -2 * max));
+			bs2.ConstantY2 = -2 * max;
+			Plots[3].BackdropSeries = bs2;
 
 			// double ceil = plots[2].Max();
 			// double threshold = 0.5 / ModulationSpeed;

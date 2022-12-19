@@ -11,14 +11,18 @@ namespace MultipathSignal.Views
 { 
 	public class PlotViewModel : ReactiveObject
 	{
-        public readonly static OxyColor[] SeriesColors = new[] { OxyColors.Blue, OxyColors.Red, OxyColors.Cyan, OxyColors.DarkGreen };
-
         #region Properties
 
         private string title = "Empty";
 		public string Title {
 			get => title;
 			set => this.RaiseAndSetIfChanged(ref title, value);
+		}
+
+		private AreaSeries? backdrop;
+		public AreaSeries? BackdropSeries {
+			get => backdrop;
+			set => this.RaiseAndSetIfChanged(ref backdrop, value);
 		}
 
 		public ObservableCollection<LineSeries> Series { get; } = new();
@@ -66,13 +70,10 @@ namespace MultipathSignal.Views
 
         public void CreateSeries(IEnumerable<DataPoint>? points = null, OxyColor? color = null)
 		{
-			var s = new LineSeries { LineStyle = LineStyle.Solid };
-			try { 
-				s.Color = color ?? SeriesColors[Series.Count];
-			}
-			catch (System.IndexOutOfRangeException) {
-				s.Color = OxyColors.Black;
-			}
+			var s = new LineSeries { 
+				LineStyle = LineStyle.Solid,
+				Color = color ?? OxyColors.Black,
+			};
 			if (points is not null)
 				s.Points.AddRange(points);
 			Series.Add(s);
@@ -145,6 +146,11 @@ namespace MultipathSignal.Views
         private void OnPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
 		{
 			switch (e.PropertyName) {
+				case nameof(BackdropSeries):
+					if (Model.Series.Count > 0 && Model.Series[0] is AreaSeries)
+						Model.Series[0] = BackdropSeries;
+					else Model.Series.Insert(0, BackdropSeries);
+					return;
 				case nameof(MinimumY):
 				case nameof(MaximumY):
 				case nameof(MinimumX):
@@ -178,26 +184,27 @@ namespace MultipathSignal.Views
 
 		private void OnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
 		{
+			int shift = BackdropSeries is null ? 0 : 1;
 			switch (e.Action)
 			{
 				case NotifyCollectionChangedAction.Add:
 					if (e.NewItems?[0] is Series @sa)
-						Model.Series.Insert(e.NewStartingIndex, @sa);
+						Model.Series.Insert(e.NewStartingIndex + shift, @sa);
 					break;
 
 				case NotifyCollectionChangedAction.Remove:
-					Model.Series.RemoveAt(e.OldStartingIndex);
+					Model.Series.RemoveAt(e.OldStartingIndex + shift);
 					break;
 
 				case NotifyCollectionChangedAction.Replace:
 					if (e.NewItems?[0] is Series @sr)
-						Model.Series[e.NewStartingIndex] = @sr;
+						Model.Series[e.NewStartingIndex + shift] = @sr;
 					break;
 
 				case NotifyCollectionChangedAction.Move:
 					if (e.NewItems?[0] is Series @sm) {
-						Model.Series.RemoveAt(e.OldStartingIndex);
-						Model.Series.Insert(e.NewStartingIndex, @sm);
+						Model.Series.RemoveAt(e.OldStartingIndex + shift);
+						Model.Series.Insert(e.NewStartingIndex + shift, @sm);
 					}
 					break;
 

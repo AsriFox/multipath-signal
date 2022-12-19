@@ -95,7 +95,7 @@ namespace MultipathSignal.Core
             var dirtySignal = await gen.ModulateAsync(baseMod);
             dirtySignal = Utils.ApplyNoise(
                 dirtySignal.Skip(
-                    (int)(SignalGenerator.Samplerate * (bitDelay / gen.BitRate - receiveDelay))
+                    (int)(SignalGenerator.Samplerate * (bitDelay * gen.BitLength - receiveDelay))
                 ).ToArray(),
                 Math.Pow(10.0, 0.1 * snrNoisy)
             );

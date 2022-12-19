@@ -255,12 +255,28 @@
         <TabItem.Header>
           <TextBlock Text="All plots" />
         </TabItem.Header>
-        <Grid Name="PlotsPanel" RowDefinitions="*,*">
-          <local:PlotView Name="PlotSignalClean"
-                          DataContext="{Binding Plots[0]}" 
+        <Grid Name="PlotsPanel"
+              ColumnDefinitions="*,*"
+              RowDefinitions="*,*">
+
+          <local:PlotView Name="PlotSignalCleanI"
+                          DataContext="{Binding Plots[0]}"
+                          Grid.Column="0" 
                           Grid.Row="0" />
-          <local:PlotView Name="PlotSignalDirty"
+
+          <local:PlotView Name="PlotSignalCleanQ"
                           DataContext="{Binding Plots[1]}"
+                          Grid.Column="0" 
+                          Grid.Row="1" />
+
+          <local:PlotView Name="PlotSignalDirtyI"
+                          DataContext="{Binding Plots[2]}"
+                          Grid.Column="1"
+                          Grid.Row="0" />
+
+          <local:PlotView Name="PlotSignalDirtyQ"
+                          DataContext="{Binding Plots[3]}"
+                          Grid.Column="1" 
                           Grid.Row="1" />
         </Grid>
       </TabItem>
@@ -270,7 +286,7 @@
           <TextBlock Text="Statistics" />
         </TabItem.Header>
         <local:PlotView Name="PlotStatistics" 
-                        DataContext="{Binding Plots[2]}" />
+                        DataContext="{Binding Plots[4]}" />
       </TabItem>
     </TabControl>
   </DockPanel>
