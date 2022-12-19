@@ -1,5 +1,4 @@
-﻿using Avalonia.X11;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -20,58 +19,53 @@ namespace MultipathSignal.Core
         public event Action<string>? StatusChanged;
 		protected internal void RaiseStatusChanged(string status) => StatusChanged?.Invoke(status);
 
-        public event Action<double, IList<Complex>[]>? PlotDataReady;
-		protected internal void RaisePlotDataReady(double delay, params IList<Complex>[] plots) => PlotDataReady?.Invoke(delay, plots);
+        public event Action<double, double, IList<Complex>[]>? PlotDataReady;
+		protected internal void RaisePlotDataReady(double delay, double deviation, params IList<Complex>[] plots) => PlotDataReady?.Invoke(delay, deviation, plots);
 
-		public Task<double> ProcessSingle(double delay, double dopplerMag, double snrClean, double snrNoisy, bool useFft)
+		public Task<double> ProcessSingle(double delay, double dopplerShift, double snrClean, double snrNoisy, bool useFft)
 		{
             StatusChanged?.Invoke("Processing one signal...");
-            return this.FindPredictedDelay(delay, dopplerMag, snrClean, snrNoisy, useFft, true);
+            return this.FindPredictionDeviation(delay, dopplerShift, snrClean, snrNoisy, useFft, true);
         }
 
-		public async Task<double> ProcessMultiple(double delay, double dopplerMag, double snrClean, double snrNoisy, bool useFft, int testsRepeatCount)
+		public async Task<double> ProcessMultiple(double delay, double dopplerShift, double snrClean, double snrNoisy, bool useFft, int testsRepeatCount)
 		{
             StatusChanged?.Invoke("Processing signals...");
             var stopw = new Stopwatch();
             stopw.Start();
             var tasks = Enumerable.Range(0, testsRepeatCount)
-                                  .Select(_ => this.FindPredictedDelay(delay, dopplerMag, snrClean, snrNoisy, useFft))
+                                  .Select(_ => this.FindPredictionDeviation(delay, dopplerShift, snrClean, snrNoisy, useFft))
                                   .ToList();
-            tasks.Add(this.FindPredictedDelay(delay, dopplerMag, snrClean, snrNoisy, useFft, true));
+            tasks.Add(this.FindPredictionDeviation(delay, dopplerShift, snrClean, snrNoisy, useFft, true));
 
             var results = await Task.WhenAll(tasks);
-            double predictedDelay = results.Sum() / results.Length;
+            double predictedDelay = results.Average();
 
             stopw.Stop();
             StatusChanged?.Invoke($"{testsRepeatCount} tasks were completed in {stopw.Elapsed.TotalSeconds:F2} s. ");
             return predictedDelay;
         }
 
-        public async Task<double> ProcessStatistic(double delayBase, double dopplerMag, double snrClean, double snrNoisy, bool useFft, int testsRepeatCount)
+        public async Task<double> ProcessStatistic(double delayBase, double dopplerShift, double snrClean, double snrNoisy, bool useFft, int testsRepeatCount)
         {
-            StatusChanged?.Invoke($"Processing signals with SNR = {snrNoisy:F2} dB");
+            StatusChanged?.Invoke($"Processing signals with Doppler shift = {dopplerShift:F2} Hz");
             var actualDelays = new List<double>();
             var tasks2 = new List<Task<double>>();
             for (int i = 0; i < testsRepeatCount; i++) {
                 double delay = delayBase * 2.0 * Utils.RNG.NextDouble();
                 actualDelays.Add(delay);
-                tasks2.Add(this.FindPredictedDelay(delay, dopplerMag, snrClean, snrNoisy, useFft));
+                tasks2.Add(this.FindPredictionDeviation(delay, dopplerShift, snrClean, snrNoisy, useFft));
             }
             actualDelays.Add(delayBase * 2.0 * Utils.RNG.NextDouble());
-            tasks2.Add(this.FindPredictedDelay(actualDelays.Last(), dopplerMag, snrClean, snrNoisy, useFft, true));
+            tasks2.Add(this.FindPredictionDeviation(actualDelays.Last(), dopplerShift, snrClean, snrNoisy, useFft, true));
 
             var results2 = await Task.WhenAll(tasks2);
-            double threshold = 0.5 / ModulationSpeed;
-            int gotitCount = 0;
-            for (int i = 0; i < results2.Length; i++)
-                if (Math.Abs(results2[i] - actualDelays[i]) < threshold)
-                    gotitCount++;
-            return (double)gotitCount / results2.Length;
+            return results2.Average();
         }
         
-        public async Task<double> FindPredictedDelay(
+        public async Task<double> FindPredictionDeviation(
             double receiveDelay, 
-            double dopplerMag, 
+            double dopplerShift, 
 			double snrClean, 
 			double snrNoisy, 
             bool useFft = true,
@@ -91,7 +85,7 @@ namespace MultipathSignal.Core
             );
             cleanSignal = Utils.ApplyNoise(cleanSignal, Math.Pow(10.0, 0.1 * snrClean));
 
-            gen.MainFrequency *= (1.0 + dopplerMag);        
+            gen.MainFrequency += dopplerShift;
             var dirtySignal = await gen.ModulateAsync(baseMod);
             dirtySignal = Utils.ApplyNoise(
                 dirtySignal.Skip(
@@ -103,12 +97,34 @@ namespace MultipathSignal.Core
 			if (output)
                 this.RaiseStatusChanged("Signal generation is complete. Calculating correlation...");
 
-            // Do correlation here;
+            var correl = useFft
+                ? await CorrelationOverlap.CalculateAsync(dirtySignal, cleanSignal)
+                // ? await CorrelationFft.CalculateAsync(dirtySignal, cleanSignal)
+                : await Correlation.CalculateAsync(dirtySignal, cleanSignal);
+            int corrPeakPos = 0;
+            double corrPeak = 0.0;
+            for (int i = 0; i < correl.Count; i++) {
+                if (correl[i].Magnitude > corrPeak) {
+                    corrPeakPos = i;
+                    corrPeak = correl[i].Magnitude;
+                }
+            }
+
+            // Calculate the standard deviation:
+            double deviation = correl.Sum(v => (v.Magnitude - corrPeak) * (v.Magnitude - corrPeak)) / correl.Count;
+            // Calculate the criterion:
+            deviation = corrPeak / Math.Sqrt(deviation);
 
 			if (output)
-			 	this.RaisePlotDataReady(receiveDelay, cleanSignal, dirtySignal);
-            return receiveDelay;
-			// return prediction;
+                this.RaisePlotDataReady(
+                    corrPeakPos / SignalGenerator.Samplerate,
+                    deviation,
+                    cleanSignal,
+                    dirtySignal,
+                    correl
+                );
+
+            return deviation;
 		}
     }
 }

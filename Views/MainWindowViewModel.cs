@@ -23,7 +23,8 @@ namespace MultipathSignal.Views
 				new PlotViewModel { Title = "Clean signal: Q", MinimumY = -1, MaximumY = 1 },
 				new PlotViewModel { Title = "Dirty signal: I", MinimumY = -1, MaximumY = 1 },
 				new PlotViewModel { Title = "Dirty signal: Q", MinimumY = -1, MaximumY = 1 },
-				new PlotViewModel { Title = "Statistics", MinimumY = 0.0, MaximumY = 1.0 },
+				new PlotViewModel { Title = "Correlation", MinimumY = 0.0 },
+				new PlotViewModel(1) { Title = "Statistics", MinimumY = 0.0, MaximumY = 1.0 },
 			};
 			Plots[0].CreateSeries(null, OxyColors.DarkBlue);
 			Plots[1].CreateSeries(null, OxyColors.DarkBlue);
@@ -35,6 +36,8 @@ namespace MultipathSignal.Views
 			Plots[3].BackdropSeries = new OxyPlot.Series.AreaSeries {
 				Fill = OxyColors.LightSalmon,
 			};
+			Plots[4].CreateSeries(null, OxyColors.Cyan);
+			Plots[4].CreateSeries(null, OxyColors.Blue);
 			Plots.CollectionChanged += (_, _) => this.RaisePropertyChanged(nameof(Plots));
 		}
 
@@ -55,32 +58,31 @@ namespace MultipathSignal.Views
 			stat.StatusChanged += OnStatusChanged;
 			stat.PlotDataReady += OnPlotDataReady;
 
+			foreach (var p in Plots) p.Clear();
+
 			try {
-				double predictedDelay;
+				double stab;
 				switch (SimulationMode) {
 					case 0:     // Single test
-						predictedDelay = await stat.ProcessSingle(ReceiveDelay, DopplerMagnitude, SNRClean, SNRNoisy, useFft);
-						Status = $"Predicted delay: {predictedDelay:F4}s";
+						stab = await stat.ProcessSingle(ReceiveDelay, DopplerShift, SNRClean, SNRNoisy, useFft);
+						Status += $"Stability: {stab:F4}";
 						break;
 
 					case 1:     // Multiple tests
-						predictedDelay = await stat.ProcessMultiple(ReceiveDelay, DopplerMagnitude, SNRClean, SNRNoisy, useFft, TestsRepeatCount);
-                        Status += $"Average predicted delay: {predictedDelay:F4}s";
+						stab = await stat.ProcessMultiple(ReceiveDelay, DopplerShift, SNRClean, SNRNoisy, useFft, TestsRepeatCount);
+                        Status += $"Average stability: {stab:F4}";
                         break;
 
 					case 2:     // Gather statistics
-						Plots[0].Clear();
-						Plots[1].Clear();
-						Plots[2].Clear();
-						Plots[2].AddDataPoint(new IEnumerable<DataPoint>[] { new List<DataPoint>() });
-						double snr = SNRNoisy;
-						double snrMax = SNRNoisyMax + 0.5 * SNRNoisyStep;
-						while (snr < snrMax) {
+						Plots[5].AddDataPoint(new IEnumerable<DataPoint>[] { new List<DataPoint>() });
+						double dmag = DopplerShift;
+						double dmagMax = DopplerShiftMax + 0.5 * DopplerShiftStep;
+						while (dmag < dmagMax) {
 							if (Utils.Cancellation.IsCancellationRequested) break;
-							double gotitPercent = await stat.ProcessStatistic(ReceiveDelay, DopplerMagnitude, SNRClean, snr, useFft, TestsRepeatCount);
-							Plots[2].AppendTo(0, new DataPoint(snr, gotitPercent));
-							SNRShown = snr;
-							snr += SNRNoisyStep;
+							stab = await stat.ProcessStatistic(ReceiveDelay, dmag, SNRClean, SNRNoisy, useFft, TestsRepeatCount);
+							Plots[5].AppendTo(0, new DataPoint(dmag, stab));
+							DopplerMagnitudeShown = dmag;
+							dmag += DopplerShiftStep;
 						}
 						break;
 				}
@@ -99,7 +101,7 @@ namespace MultipathSignal.Views
 
 		public void OnStatusChanged(string status) => Status = status;
 
-		public void OnPlotDataReady(double delay, IList<Complex>[] plots)
+		public void OnPlotDataReady(double delay, double deviation, IList<Complex>[] plots)
 		{
 			Status = "Data was generated successfully. Plotting...";
 			SignalGenerator g = new() {
@@ -160,18 +162,17 @@ namespace MultipathSignal.Views
 			bs2.ConstantY2 = -2 * max;
 			Plots[3].BackdropSeries = bs2;
 
-			// double ceil = plots[2].Max();
-			// double threshold = 0.5 / ModulationSpeed;
-			// var delayLimits = new double[(int)(2 * threshold * Samplerate)];
-			// for (int t = 1; t < delayLimits.Length - 1; t++)
-			// 	delayLimits[t] = ceil;
-
-			// Plots[1].AddDataPoint(
-			// 	plots[2].Plotify(),
-			// 	delayLimits.Plotify(delay - threshold)
-			// );
-			// Plots[1].MaximumX = plots[1].Count / Samplerate;
-			Status = "Procedure was completed. Ready.";
+			var correl = plots[2].Select(c => c.Magnitude).ToArray();
+			double ceil = correl.Max();
+			// double threshold = 0.5 * ceil / deviation;
+			Plots[4].AddDataPoint(
+				correl.Plotify(),
+				new DataPoint[] {
+					new(delay, 0.0),
+					new(delay, ceil),
+				}
+			);
+			Status = $"Procedure was completed. Predicted delay: {delay:F4}s; ";
 		}
 
 		#region Modulation parameters
@@ -188,25 +189,25 @@ namespace MultipathSignal.Views
 			set => this.RaiseAndSetIfChanged(ref modulationDepth, value);
 		}
 		
-		private double modulationSpeed = 100;
+		private double modulationSpeed = 1080;
 		public double ModulationSpeed {
 			get => modulationSpeed;
 			set => this.RaiseAndSetIfChanged(ref modulationSpeed, value);
 		}
 
-		private int bitSeqLength = 64;
+		private int bitSeqLength = 50;
 		public int BitSeqLength {
 			get => bitSeqLength;
 			set => this.RaiseAndSetIfChanged(ref bitSeqLength, value);
 		}
 
-		private double mainFrequency = 1000.0;
+		private double mainFrequency = 10000.0;
 		public double MainFrequency {
 			get => mainFrequency;
 			set => this.RaiseAndSetIfChanged(ref mainFrequency, value);
 		}
 
-		private double samplerate = 10000.0;
+		private double samplerate = 131072.0;
 		public double Samplerate {
 			get => samplerate;
 			set => this.RaiseAndSetIfChanged(ref samplerate, value);
@@ -216,23 +217,17 @@ namespace MultipathSignal.Views
 
 		#region Simulation parameters
 
-		private int simulationMode = 1;
+		private int simulationMode = 0;
         public int SimulationMode {
             get => simulationMode;
             set => this.RaiseAndSetIfChanged(ref simulationMode, value);
         }
 
-        private double receiveDelay = 0.08;
+        private double receiveDelay = 0.02;
         public double ReceiveDelay {
             get => receiveDelay;
             set => this.RaiseAndSetIfChanged(ref receiveDelay, value);
         }
-
-		private double dopplerMag = 0.001;
-		public double DopplerMagnitude {
-			get => dopplerMag;
-			set => this.RaiseAndSetIfChanged(ref dopplerMag, value);
-		}
 
         private double snrClean = 10.0;
         public double SNRClean {
@@ -246,19 +241,25 @@ namespace MultipathSignal.Views
             set => this.RaiseAndSetIfChanged(ref snrNoisy, value);
         }
 
-        private double snrNoisyMax = 10.0;
-        public double SNRNoisyMax {
-            get => snrNoisyMax;
-            set => this.RaiseAndSetIfChanged(ref snrNoisyMax, value);
+		private double dopplerShift = 100.0;
+		public double DopplerShift {
+			get => dopplerShift;
+			set => this.RaiseAndSetIfChanged(ref dopplerShift, value);
+		}
+
+        private double dopplerShiftMax = 1000.0;
+        public double DopplerShiftMax {
+            get => dopplerShiftMax;
+            set => this.RaiseAndSetIfChanged(ref dopplerShiftMax, value);
         }
 
-        private double snrNoisyStep = 1.0;
-        public double SNRNoisyStep {
-            get => snrNoisyStep;
-            set => this.RaiseAndSetIfChanged(ref snrNoisyStep, value);
+        private double dopplerShiftStep = 50.0;
+        public double DopplerShiftStep {
+            get => dopplerShiftStep;
+            set => this.RaiseAndSetIfChanged(ref dopplerShiftStep, value);
         }
 
-        private int testsRepeatCount = 1000;
+        private int testsRepeatCount = 200;
         public int TestsRepeatCount {
             get => testsRepeatCount;
             set => this.RaiseAndSetIfChanged(ref testsRepeatCount, value);
@@ -284,12 +285,12 @@ namespace MultipathSignal.Views
 			set => this.RaiseAndSetIfChanged(ref useFft, value);
 		}
 
-		private double snrShown = 0.0;
-		public double SNRShown {
-			get => snrShown;
+		private double dopplerMagShown = 0.0;
+		public double DopplerMagnitudeShown {
+			get => dopplerMagShown;
 			set {
-				this.RaiseAndSetIfChanged(ref snrShown, value);
-				int sel = (int)((snrShown - SNRNoisy) / SNRNoisyStep);
+				this.RaiseAndSetIfChanged(ref dopplerMagShown, value);
+				int sel = (int)((dopplerMagShown - DopplerShift) / DopplerShiftStep);
 				foreach (var plot in Plots)
 					plot.SelectDataPoint(sel);
 			}

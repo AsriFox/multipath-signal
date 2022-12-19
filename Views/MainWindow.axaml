@@ -127,6 +127,7 @@
                            Value="{Binding ModulationDepth, Mode=TwoWay}"
                            Minimum="0"
                            Maximum="1"
+                           IsVisible="{Binding !ModulationType}"
                            PointerEnter="PointerMoveFocus" />
           
           <local:NumberBox Header="Modulation speed, bps"
@@ -174,14 +175,36 @@
                            Grid.Column="0"
                            Grid.Row="0" />
 
-          <local:NumberBox Header="Doppler effect magnitude"
-                           Format="{}{0:+0.0e+0;-0.0e+0}"
-                           Step="0.0001"
-                           Value="{Binding DopplerMagnitude, Mode=TwoWay}"
-                           Minimum="-0.01"
-                           Maximum="0.01"
+          <local:NumberBox Header="Doppler shift, Hz"
+                           Format="{}{0:F0}"
+                           Step="10"
+                           Value="{Binding DopplerShift, Mode=TwoWay}"
+                           Minimum="0"
+                           Maximum="{Binding DopplerShiftMax, Mode=OneWay}"
                            PointerEnter="PointerMoveFocus"
                            Grid.Column="0"
+                           Grid.Row="1" />
+
+          <local:NumberBox Header="Doppler: Max, Hz"
+                           Format="{}{0:F0}"
+                           Step="10"
+                           Value="{Binding DopplerShiftMax, Mode=TwoWay}"
+                           IsVisible="{Binding #SimVariantFull.IsSelected}"
+                           PointerEnter="PointerMoveFocus"
+                           Minimum="{Binding DopplerShift, Mode=OneWay}"
+                           Maximum="1000"
+                           Grid.Column="1"
+                           Grid.Row="1" />
+          
+          <local:NumberBox Header="Doppler: Step, Hz"
+                           Format="{}{0:F0}"
+                           Step="5"
+                           Value="{Binding DopplerShiftStep, Mode=TwoWay}"
+                           IsVisible="{Binding #SimVariantFull.IsSelected}"
+                           PointerEnter="PointerMoveFocus"
+                           Minimum="1"
+                           Maximum="100"
+                           Grid.Column="2"
                            Grid.Row="1" />
 
           <local:NumberBox Header="SNR for clean, dB"
@@ -198,24 +221,6 @@
                            Value="{Binding SNRNoisy, Mode=TwoWay}"
                            PointerEnter="PointerMoveFocus"
                            Grid.Column="2"
-                           Grid.Row="0" />
-
-          <local:NumberBox Header="SNR maximum, dB"
-                           Format="{}{0:F2}"
-                           Step="1"
-                           Value="{Binding SNRNoisyMax, Mode=TwoWay}"
-                           IsVisible="{Binding #SimVariantFull.IsSelected}"
-                           PointerEnter="PointerMoveFocus"
-                           Grid.Column="2"
-                           Grid.Row="1" />
-          
-          <local:NumberBox Header="SNR step size, dB"
-                           Format="{}{0:F2}"
-                           Step="1"
-                           Value="{Binding SNRNoisyStep, Mode=TwoWay}"
-                           IsVisible="{Binding #SimVariantFull.IsSelected}"
-                           PointerEnter="PointerMoveFocus"
-                           Grid.Column="1"
                            Grid.Row="0" />
 
           <ListBox Name="SimVariants"
@@ -283,10 +288,18 @@
       
       <TabItem FontSize="12" Margin="0" Padding="10, 2" MinHeight="0">
         <TabItem.Header>
+          <TextBlock Text="Correlation" />
+        </TabItem.Header>
+        <local:PlotView Name="PlotCorrelation" 
+                        DataContext="{Binding Plots[4]}" />
+      </TabItem>
+
+      <TabItem FontSize="12" Margin="0" Padding="10, 2" MinHeight="0">
+        <TabItem.Header>
           <TextBlock Text="Statistics" />
         </TabItem.Header>
         <local:PlotView Name="PlotStatistics" 
-                        DataContext="{Binding Plots[4]}" />
+                        DataContext="{Binding Plots[5]}" />
       </TabItem>
     </TabControl>
   </DockPanel>

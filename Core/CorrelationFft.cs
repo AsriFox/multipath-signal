@@ -2,35 +2,44 @@ namespace MultipathSignal.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Threading.Tasks;
 using static FftSharp.Transform;
 
 public static class CorrelationFft 
 {
-    public static IList<double> Calculate(IList<double> bigarr, IList<double> smolar)
+    public static IList<Complex> Calculate(IList<Complex> bigarr, IList<Complex> smolar)
     {
         int bigsize = 1;
         while (bigsize < bigarr.Count + smolar.Count) bigsize <<= 1;
-        var bigarr2 = new double[bigsize];
-        bigarr.CopyTo(bigarr2, 0);
-        var smolar2 = new double[bigsize];
+        var bigarr2 = new FftSharp.Complex[bigsize];
+        for (int i = 0; i < bigarr.Count; i++)
+            bigarr2[i] = new(bigarr[i].Real, bigarr[i].Imaginary);
+        var smolar2 = new FftSharp.Complex[bigsize];
         for (int i = 0; i < smolar.Count; i++)
-            smolar2[i] = smolar[smolar.Count - 1 - i];
+            smolar2[i] = new(smolar[i].Real, smolar[i].Imaginary);
 
-        var bigfft = FFT(bigarr2);
-        var smolft = FFT(smolar2);
-        var corrft = Enumerable.Zip(bigfft, smolft, (a, b) => a * b).ToArray();
+        FFT(bigarr2);
+        FFT(smolar2);
+        var corrft = Enumerable.Zip(
+            bigarr2, 
+            smolar2, 
+            (a, b) => a * new FftSharp.Complex(b.Real, -b.Imaginary)
+        ).ToArray();
         IFFT(corrft);
-        var correl = new double[bigarr.Count - smolar.Count];
+        var correl = new Complex[bigarr.Count - smolar.Count];
         for (int i = 0; i < correl.Length; i++)
-            correl[i] = corrft[i + smolar.Count].Magnitude;
+            correl[i] = new(
+                corrft[i + smolar.Count].Real / correl.Length,
+                corrft[i + smolar.Count].Imaginary / correl.Length
+            );
         return correl;
     }
 
-    public static Task<IList<double>> CalculateAsync(IList<double> bigarr, IList<double> smolar) =>
+    public static Task<IList<Complex>> CalculateAsync(IList<Complex> bigarr, IList<Complex> smolar) =>
         Task.Factory.StartNew(
             args => {
-                if (args is not Tuple<IList<double>, IList<double>> arrs)
+                if (args is not Tuple<IList<Complex>, IList<Complex>> arrs)
                     throw new ArgumentException($"Expected a pair of arrays, got {args?.GetType()}", nameof(args));
                 return Calculate(arrs.Item1, arrs.Item2);
             },

@@ -1,23 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Threading.Tasks;
 
 namespace MultipathSignal.Core
 {
     internal static class Correlation
     {
-        public static IList<double> Calculate(IList<double> bigarr, IList<double> smolar)
+        public static IList<Complex> Calculate(IList<Complex> bigarr, IList<Complex> smolar)
         {
             if (bigarr.Count < smolar.Count)
                 throw new ArgumentException("Place the bigger array in the first argument, please");
-            int n = bigarr.Count;
-            var result = new double[n - smolar.Count];
+            var result = new Complex[bigarr.Count + smolar.Count];
             Parallel.For(0, result.Length, k => {
-                double v = 0;
-                for (int i = 0; i < smolar.Count; i++)
-                    v += bigarr[i + k] * smolar[i];
-                result[k] = Math.Abs(v) / smolar.Count;
+                Complex v = 0;
+                for (int i = Math.Max(smolar.Count - k, 0); 
+                    i < smolar.Count && 
+                    i + k - smolar.Count < bigarr.Count; 
+                    i++)
+                    v += bigarr[i + k - smolar.Count] * Complex.Conjugate(smolar[i]);
+                result[k] = v / smolar.Count;
             });
             return result;
         }
@@ -26,10 +29,10 @@ namespace MultipathSignal.Core
         /// Calculate the cross-correlation asynchronously.
         /// Uses the default cancellation token.
         /// </summary>
-        public static Task<IList<double>> CalculateAsync(IList<double> bigarr, IList<double> smolar) =>
+        public static Task<IList<Complex>> CalculateAsync(IList<Complex> bigarr, IList<Complex> smolar) =>
             Task.Factory.StartNew(
                 args => {
-                    if (args is not Tuple<IList<double>, IList<double>> arrs)
+                    if (args is not Tuple<IList<Complex>, IList<Complex>> arrs)
                         throw new ArgumentException($"Expected a pair of arrays, got {args?.GetType()}", nameof(args));
                     return Calculate(arrs.Item1, arrs.Item2);
                 },
