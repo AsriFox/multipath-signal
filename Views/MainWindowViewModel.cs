@@ -2,11 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Threading;
+using System.Numerics;
 using System.Threading.Tasks;
-using Avalonia.Controls.Templates;
-using Avalonia.Threading;
 using MultipathSignal.Core;
 using OxyPlot;
 using ReactiveUI;
@@ -22,13 +19,12 @@ namespace MultipathSignal.Views
 		public MainWindowViewModel()
 		{
 			Plots = new() {
-				new PlotViewModel(2) { Title = "Signals" },
-				new PlotViewModel(2) { Title = "Correlation", MinimumY = 0.0 },
+				new PlotViewModel(1) { Title = "Clean signal", MinimumY = -Math.PI, MaximumY = Math.PI },
+				new PlotViewModel(2) { Title = "Dirty signal" },
 				new PlotViewModel(1) { Title = "Statistics", MinimumY = 0.0, MaximumY = 1.0 },
 			};
-			Plots[0].Series[0].Color = OxyColors.LightBlue;
-			Plots[0].Series[1].Color = OxyColors.OrangeRed;
-			Plots[1].Series[0].Color = OxyColors.LightBlue;
+			Plots[0].Series[0].Color = OxyColors.ForestGreen;
+			Plots[1].Series[0].Color = OxyColors.LightSalmon;
 			Plots[1].Series[1].Color = OxyColors.DarkBlue;
 			Plots.CollectionChanged += (_, _) => this.RaisePropertyChanged(nameof(Plots));
 		}
@@ -54,12 +50,12 @@ namespace MultipathSignal.Views
 				double predictedDelay;
 				switch (SimulationMode) {
 					case 0:     // Single test
-						predictedDelay = await stat.ProcessSingle(ReceiveDelay, SNRClean, SNRNoisy, useFft);
+						predictedDelay = await stat.ProcessSingle(ReceiveDelay, DopplerMagnitude, SNRClean, SNRNoisy, useFft);
 						Status = $"Predicted delay: {predictedDelay:F4}s";
 						break;
 
 					case 1:     // Multiple tests
-						predictedDelay = await stat.ProcessMultiple(ReceiveDelay, SNRClean, SNRNoisy, useFft, TestsRepeatCount);
+						predictedDelay = await stat.ProcessMultiple(ReceiveDelay, DopplerMagnitude, SNRClean, SNRNoisy, useFft, TestsRepeatCount);
                         Status += $"Average predicted delay: {predictedDelay:F4}s";
                         break;
 
@@ -72,7 +68,7 @@ namespace MultipathSignal.Views
 						double snrMax = SNRNoisyMax + 0.5 * SNRNoisyStep;
 						while (snr < snrMax) {
 							if (Utils.Cancellation.IsCancellationRequested) break;
-							double gotitPercent = await stat.ProcessStatistic(ReceiveDelay, SNRClean, snr, useFft, TestsRepeatCount);
+							double gotitPercent = await stat.ProcessStatistic(ReceiveDelay, DopplerMagnitude, SNRClean, snr, useFft, TestsRepeatCount);
 							Plots[2].AppendTo(0, new DataPoint(snr, gotitPercent));
 							SNRShown = snr;
 							snr += SNRNoisyStep;
@@ -94,31 +90,51 @@ namespace MultipathSignal.Views
 
 		public void OnStatusChanged(string status) => Status = status;
 
-		public void OnPlotDataReady(double delay, IList<double>[] plots)
+		public void OnPlotDataReady(double delay, IList<Complex>[] plots)
 		{
 			Status = "Data was generated successfully. Plotting...";
-			Plots[0].AddDataPoint(
-				plots[1].Plotify(), 
-				plots[0].Plotify(delay)
-			);
+			SignalGenerator g = new() {
+				Frequency = MainFrequency,
+				Phase = 0.0,
+			};
+			var cleanSignal = new double[plots[0].Count];
+			for (int i = 0; i < cleanSignal.Length; i++) {
+				var c = plots[0][i] / g.GetNextSample();
+				cleanSignal[i] = c.Phase;
+			}
+			Plots[0].AddDataPoint(cleanSignal.Plotify());
 
-			double ceil = plots[2].Max();
-			double threshold = 0.5 / ModulationSpeed;
-			var delayLimits = new double[(int)(2 * threshold * Samplerate)];
-			for (int t = 1; t < delayLimits.Length - 1; t++)
-				delayLimits[t] = ceil;
-
+			g.Phase = 0.0;
+			var dirtySignal = new double[plots[1].Count];
+			for (int i = 0; i < dirtySignal.Length; i++) {
+				var c = plots[1][i] / g.GetNextSample();
+				dirtySignal[i] = c.Phase;
+			}
 			Plots[1].AddDataPoint(
-				plots[2].Plotify(),
-				delayLimits.Plotify(delay - threshold)
+				dirtySignal.Plotify(),
+				new DataPoint[] {
+					new(delay, -Math.PI),
+					new(delay, Math.PI)
+				}
 			);
+
+			// double ceil = plots[2].Max();
+			// double threshold = 0.5 / ModulationSpeed;
+			// var delayLimits = new double[(int)(2 * threshold * Samplerate)];
+			// for (int t = 1; t < delayLimits.Length - 1; t++)
+			// 	delayLimits[t] = ceil;
+
+			// Plots[1].AddDataPoint(
+			// 	plots[2].Plotify(),
+			// 	delayLimits.Plotify(delay - threshold)
+			// );
 			// Plots[1].MaximumX = plots[1].Count / Samplerate;
 			Status = "Procedure was completed. Ready.";
 		}
 
 		#region Modulation parameters
 
-		private SignalModulator.Modulation modulationType = SignalModulator.Modulation.OOK;
+		private SignalModulator.Modulation modulationType = SignalModulator.Modulation.AM;
         public SignalModulator.Modulation ModulationType {
             get => modulationType;
             set => this.RaiseAndSetIfChanged(ref modulationType, value);
@@ -169,6 +185,12 @@ namespace MultipathSignal.Views
             get => receiveDelay;
             set => this.RaiseAndSetIfChanged(ref receiveDelay, value);
         }
+
+		private double dopplerMag = 0.001;
+		public double DopplerMagnitude {
+			get => dopplerMag;
+			set => this.RaiseAndSetIfChanged(ref dopplerMag, value);
+		}
 
         private double snrClean = 10.0;
         public double SNRClean {

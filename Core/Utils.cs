@@ -1,26 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Threading;
-using MathNet.Numerics.Random;
+// using MathNet.Numerics.Random;
 
 namespace MultipathSignal.Core
 {
 	internal static class Utils
 	{
-		public readonly static MersenneTwister RNG = new();
+		public readonly static Random RNG = new();
 		
 		public static IEnumerable<bool> RandomBitSeq(int length) {
 			var result = new bool[length];
 			for (int i = 0; i < length; i++)
-				result[i] = RNG.NextBoolean(); // .NextDouble() > 0.5;
+				result[i] = RNG.NextDouble() > 0.5;	// RNG.NextBoolean();
 			return result;
 		}
 
-        public static IList<double> ApplyNoise(IList<double> signal, double snr)
+        public static IList<Complex> ApplyNoise(IList<Complex> signal, double snr)
         {
             if (signal.Count <= 0)
-                return Array.Empty<double>();
+                return Array.Empty<Complex>();
 
 			Random rng = new();
 			double sample() {
@@ -31,24 +32,22 @@ namespace MultipathSignal.Core
 			}
 
             //MathNet.Numerics.Distributions.Normal rand = new(new MersenneTwister(true));
-            var noise = new double[signal.Count];
+            var noise = new Complex[signal.Count];
             double energyNoise = 0.0, energySignal = 0.0;
             for (int i = 0; i < signal.Count; i++)
             {
-                noise[i] = sample();
-                energyNoise += noise[i] * noise[i];
-                energySignal += signal[i] * signal[i];
+                noise[i] = Complex.FromPolarCoordinates(
+					sample(),
+					Math.Tau * sample()
+				);
+                energyNoise += noise[i].Magnitude * noise[i].Magnitude;
+                energySignal += signal[i].Magnitude * signal[i].Magnitude;
             }
 
             double noiseMod = Math.Sqrt(energySignal / energyNoise / snr);
-			double ampAvg = 0.0;
             for (int i = 0; i < signal.Count; i++) {
                 noise[i] = signal[i] + noise[i] * noiseMod;
-				ampAvg += Math.Abs(noise[i]);
 			}
-			ampAvg /= noise.Length;
-			for (int i = 0; i < noise.Length; i++)
-				noise[i] /= ampAvg;
             return noise;
         }
 
@@ -80,5 +79,19 @@ namespace MultipathSignal.Core
 		}
 
 		public static CancellationTokenSource Cancellation = new();
+
+		public static IEnumerable<Complex> Quadify(this IEnumerable<bool> source) {
+			double am = Math.Sqrt(0.5);
+			using (var iterator = source.GetEnumerator()) {
+				while (iterator.MoveNext()) {
+					bool i = iterator.Current;
+					bool q = iterator.MoveNext() ? iterator.Current : false;
+					yield return new Complex(
+						i ? am : -am,
+						q ? am : -am
+					);
+				}
+			}
+		}
 	}
 }

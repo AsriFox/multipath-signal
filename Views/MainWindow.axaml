@@ -114,10 +114,10 @@
                     VerticalAlignment="Stretch"
                     IsEnabled="{Binding EditMode}" 
                     PointerEnter="PointerMoveFocus">
-              <ComboBoxItem Content="BASK (OOK)" />
+              <ComboBoxItem Content="BASK (AM)" />
               <ComboBoxItem Content="BPSK" />
               <ComboBoxItem Content="BPSK-NRZI" />
-              <ComboBoxItem Content="BFSK (FT)" />
+              <ComboBoxItem Content="MSK" />
             </ComboBox>
           </DockPanel>
 
@@ -174,6 +174,16 @@
                            Grid.Column="0"
                            Grid.Row="0" />
 
+          <local:NumberBox Header="Doppler effect magnitude"
+                           Format="{}{0:+0.0e+0;-0.0e+0}"
+                           Step="0.0001"
+                           Value="{Binding DopplerMagnitude, Mode=TwoWay}"
+                           Minimum="-0.01"
+                           Maximum="0.01"
+                           PointerEnter="PointerMoveFocus"
+                           Grid.Column="0"
+                           Grid.Row="1" />
+
           <local:NumberBox Header="SNR for clean, dB"
                            Format="{}{0:F2}"
                            Step="1"
@@ -190,14 +200,32 @@
                            Grid.Column="2"
                            Grid.Row="0" />
 
+          <local:NumberBox Header="SNR maximum, dB"
+                           Format="{}{0:F2}"
+                           Step="1"
+                           Value="{Binding SNRNoisyMax, Mode=TwoWay}"
+                           IsVisible="{Binding #SimVariantFull.IsSelected}"
+                           PointerEnter="PointerMoveFocus"
+                           Grid.Column="2"
+                           Grid.Row="1" />
+          
+          <local:NumberBox Header="SNR step size, dB"
+                           Format="{}{0:F2}"
+                           Step="1"
+                           Value="{Binding SNRNoisyStep, Mode=TwoWay}"
+                           IsVisible="{Binding #SimVariantFull.IsSelected}"
+                           PointerEnter="PointerMoveFocus"
+                           Grid.Column="1"
+                           Grid.Row="0" />
+
           <ListBox Name="SimVariants"
                    SelectedIndex="{Binding SimulationMode, Mode=TwoWay}"
                    Padding="0"
                    BorderBrush="Transparent"
                    VerticalAlignment="Bottom"
                    SelectionMode="Single"
-                   Grid.Column="0"
-                   Grid.Row="1">
+                   Grid.Column="3"
+                   Grid.Row="0">
 
             <ListBoxItem Name="SimVariantSingle"
                           Content="Single test" />
@@ -216,24 +244,6 @@
                            Minimum="1"
                            IsVisible="{Binding !#SimVariantSingle.IsSelected}"
                            PointerEnter="PointerMoveFocus"
-                           Grid.Column="1"
-                           Grid.Row="1" />
-          
-          <local:NumberBox Header="SNR maximum, dB"
-                           Format="{}{0:F2}"
-                           Step="1"
-                           Value="{Binding SNRNoisyMax, Mode=TwoWay}"
-                           IsVisible="{Binding #SimVariantFull.IsSelected}"
-                           PointerEnter="PointerMoveFocus"
-                           Grid.Column="3"
-                           Grid.Row="0" />
-          
-          <local:NumberBox Header="SNR step size, dB"
-                           Format="{}{0:F2}"
-                           Step="1"
-                           Value="{Binding SNRNoisyStep, Mode=TwoWay}"
-                           IsVisible="{Binding #SimVariantFull.IsSelected}"
-                           PointerEnter="PointerMoveFocus"
                            Grid.Column="3"
                            Grid.Row="1" />
         </Grid>
@@ -245,19 +255,13 @@
         <TabItem.Header>
           <TextBlock Text="All plots" />
         </TabItem.Header>
-        <Grid Name="PlotsPanel"
-              ColumnDefinitions="*,*"
-              RowDefinitions="*,*">
-          <local:PlotView Name="PlotSignal"
+        <Grid Name="PlotsPanel" RowDefinitions="*,*">
+          <local:PlotView Name="PlotSignalClean"
                           DataContext="{Binding Plots[0]}" 
-                          Grid.ColumnSpan="2" Grid.Row="0" />
-          <local:PlotView Name="PlotCorrel"
+                          Grid.Row="0" />
+          <local:PlotView Name="PlotSignalDirty"
                           DataContext="{Binding Plots[1]}"
-                          Grid.Column="0" Grid.Row="1" />
-          <local:PlotView Name="PlotStats"
-                          DataContext="{Binding Plots[2]}"
-                          IsVisible="{Binding !SimVariantSingle.IsSelected}"
-                          Grid.Column="1" Grid.Row="1" />
+                          Grid.Row="1" />
         </Grid>
       </TabItem>
       
@@ -265,7 +269,7 @@
         <TabItem.Header>
           <TextBlock Text="Statistics" />
         </TabItem.Header>
-        <local:PlotView Name="PlotStatsBig" 
+        <local:PlotView Name="PlotStatistics" 
                         DataContext="{Binding Plots[2]}" />
       </TabItem>
     </TabControl>

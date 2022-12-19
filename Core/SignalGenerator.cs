@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Numerics;
 using System.Threading.Tasks;
 
 namespace MultipathSignal.Core
 { 
 	/// <summary>
-	/// Signal generator: harmonic wave
+	/// Signal generator: complex waveform
 	/// </summary>
 	internal class SignalGenerator
 	{
@@ -20,17 +22,11 @@ namespace MultipathSignal.Core
 
 		public double Frequency { get; set; } = 1;
 
-		public double Period {
-			get => 1.0 / (Math.Tau * Frequency);
-			set => Frequency = Math.Tau / value;
-		}
-
-		public double GetNextSample() {
+		public Complex GetNextSample() {
 			Phase += Math.Tau * Frequency * Delta;
 			if (Phase > Math.Tau) 
 				Phase -= Math.Tau;
-			// if (Phase < -Math.PI) Phase += Math.Tau;
-			return Math.Sin(Phase);
+			return Complex.Exp(Complex.ImaginaryOne * Phase);
 		}
 	}
 
@@ -38,9 +34,9 @@ namespace MultipathSignal.Core
 	{
 		public enum Modulation { 
 			/// <summary>
-			/// On-Off Keying: amplitude shift keying with 2 states (1 bit)
+			/// Amplitude shift keying with 2 states (1 bit)
 			/// </summary>
-			OOK,
+			AM,
 
 			/// <summary>
 			/// BPSK: binary phase shift keying (2 states - 1 bit) 
@@ -57,14 +53,12 @@ namespace MultipathSignal.Core
 			BPSK_I,
 
 			/// <summary>
-			/// BFSK: binary frequency shift keying (2 states - 1 bit) 
-			/// <br/>
-			/// "Frequency Telegraph"
+			/// MSK: binary minimum-shift keying (2 states - 1 bit) 
 			/// </summary>
-			FT,
+			MSK,
 		}
 
-		public Modulation Method { get; set; } = Modulation.OOK;
+		public Modulation Method { get; set; } = Modulation.AM;
 
 		public SignalGenerator Generator { get; set; } = new();
 
@@ -79,41 +73,52 @@ namespace MultipathSignal.Core
 
 		public double Depth { get; set; } = 0.8;
 
-		public IList<double> Modulate(IEnumerable<bool> modul)
+		public IList<Complex> Modulate(IEnumerable<bool> modul)
 		{
+			Generator.Phase = 0.0;
 			Generator.Frequency = MainFrequency;
 
-			void m(double a, ref List<double> s) {
-				for (uint i = 0; i < BitLength * SignalGenerator.Samplerate; i++)
-					s.Add(Generator.GetNextSample() * a);
-			}
-
-			List<double> signal = new();
+			int bitLength = (int)(BitLength * SignalGenerator.Samplerate);
+			List<Complex> signal = new(bitLength);
 			switch (Method) {
-				case Modulation.OOK:
-					foreach (bool q in modul) 
-						m(q ? 1.0 : 1.0 - Depth, ref signal);
+				case Modulation.AM:
+					foreach (bool b in modul) {
+						double a = b ? 1.0 : 1.0 - Depth;
+						for (uint i = 0; i < bitLength; i++)
+							signal.Add(Generator.GetNextSample() * a);
+					}
 					break;
 				
 				case Modulation.BPSK:
-					foreach (bool q in modul) {
-						if (q) Generator.Phase += Math.PI;
-						m(1.0, ref signal);
-						if (q) Generator.Phase -= Math.PI;
+					foreach (bool b in modul) {
+						// if (q) Generator.Phase += Math.PI;
+						double a = b ? -1.0 : 1.0;
+						for (uint i = 0; i < bitLength; i++)
+							signal.Add(Generator.GetNextSample() * a);
+						// if (q) Generator.Phase -= Math.PI;
 					}
 					break;
 
 				case Modulation.BPSK_I:
-					foreach (bool q in modul) {
-						if (q) Generator.Phase += Math.PI;
-						m(1.0, ref signal);
+					foreach (bool b in modul) {
+						if (b) Generator.Phase += Math.PI;
+						for (uint i = 0; i < bitLength; i++)
+							signal.Add(Generator.GetNextSample());
 					}
 					break;
 
-				case Modulation.FT:
-					foreach (bool q in modul) {
-						Generator.Frequency = MainFrequency * (q ? 1.0 + Depth : 1.0 - Depth);
-						m(1.0, ref signal);
+				case Modulation.MSK:
+					double mf = Math.PI * 0.5 / bitLength;
+					foreach (Complex a in modul.Quadify()) {
+						for (uint i = 0; i < bitLength; i++) {
+							Complex s = Generator.GetNextSample();
+							double mi = Math.Cos(i * mf);
+							double mq = Math.Sin(i * mf);
+							signal.Add(new(
+								a.Real * s.Real * mi,
+								a.Imaginary * s.Imaginary * mq
+							));
+						}
 					}
 					break;
 			}
@@ -124,11 +129,11 @@ namespace MultipathSignal.Core
 		/// Modulate a bit sequence asynchronously.
 		/// Uses the default cancellation token.
 		/// </summary>
-		public Task<IList<double>> ModulateAsync(IEnumerable<bool> modul) =>
+		public Task<IList<Complex>> ModulateAsync(IEnumerable<bool> modul) =>
 			Task.Factory.StartNew(
 				mv => {
 					if (mv is not IEnumerable<bool> @modv) 
-						return Array.Empty<double>();
+						return Array.Empty<Complex>();
 					return Modulate(modv);
 				}, 
 				modul,
