@@ -84,8 +84,7 @@ namespace MultipathSignal.Core
 
 			int bitDelay = (int) Math.Ceiling(receiveDelay * gen.BitRate);
 			var signal = await gen.ModulateAsync(
-				Utils.RandomBitSeq(
-					bitDelay + 2 * this.BitSeqLength + Utils.RNG.Next(bitDelay, this.BitSeqLength)));
+				Utils.RandomBitSeq(bitDelay + 2 * this.BitSeqLength));
 
 			int initDelay = (int)(bitDelay * SignalGenerator.Samplerate / this.ModulationSpeed);
 			var clearSignal = Utils.ApplyNoise(

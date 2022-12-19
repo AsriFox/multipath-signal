@@ -67,6 +67,7 @@ namespace MultipathSignal.Views
 						Plots[0].Clear();
 						Plots[1].Clear();
 						Plots[2].Clear();
+						Plots[2].AddDataPoint(new IEnumerable<DataPoint>[] { new List<DataPoint>() });
 						double snr = SNRNoisy;
 						double snrMax = SNRNoisyMax + 0.5 * SNRNoisyStep;
 						while (snr < snrMax) {

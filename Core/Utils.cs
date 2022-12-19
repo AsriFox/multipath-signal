@@ -22,7 +22,7 @@ namespace MultipathSignal.Core
             if (signal.Count <= 0)
                 return Array.Empty<double>();
 
-			MersenneTwister rng = new(true);
+			Random rng = new();
 			double sample() {
 				double s = 0.0;
 				for (int i = 0; i < 12; i++)
