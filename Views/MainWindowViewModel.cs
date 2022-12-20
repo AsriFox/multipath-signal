@@ -50,6 +50,8 @@ namespace MultipathSignal.Views
 			stat.StatusChanged += OnStatusChanged;
 			stat.PlotDataReady += OnPlotDataReady;
 
+			foreach (var p in Plots) p.Clear();
+
 			try {
 				double predictedDelay;
 				switch (SimulationMode) {
@@ -64,9 +66,6 @@ namespace MultipathSignal.Views
                         break;
 
 					case 2:     // Gather statistics
-						Plots[0].Clear();
-						Plots[1].Clear();
-						Plots[2].Clear();
 						Plots[2].AddDataPoint(new IEnumerable<DataPoint>[] { new List<DataPoint>() });
 						double snr = SNRNoisy;
 						double snrMax = SNRNoisyMax + 0.5 * SNRNoisyStep;

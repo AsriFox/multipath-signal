@@ -22,12 +22,13 @@ namespace MultipathSignal.Core
             if (signal.Count <= 0)
                 return Array.Empty<double>();
 
-			Random rng = new();
+			Random rng = new(RNG.Next());
 			double sample() {
 				double s = 0.0;
-				for (int i = 0; i < 12; i++)
+				const int l = 20;
+				for (int i = 0; i < l; i++)
 					s += 2.0 * rng.NextDouble() - 1.0;
-				return s / 12.0;
+				return s / l;
 			}
 
             //MathNet.Numerics.Distributions.Normal rand = new(new MersenneTwister(true));
