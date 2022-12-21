@@ -12,14 +12,11 @@ namespace MultipathSignal.Core
         {
             if (bigarr.Count < smolar.Count)
                 throw new ArgumentException("Place the bigger array in the first argument, please");
-            var result = new Complex[bigarr.Count + smolar.Count];
+            var result = new Complex[bigarr.Count - smolar.Count];
             Parallel.For(0, result.Length, k => {
                 Complex v = 0;
-                for (int i = Math.Max(smolar.Count - k, 0); 
-                    i < smolar.Count && 
-                    i + k - smolar.Count < bigarr.Count; 
-                    i++)
-                    v += bigarr[i + k - smolar.Count] * Complex.Conjugate(smolar[i]);
+                for (int i = 0; i < smolar.Count; i++)
+                    v += bigarr[i + k] * Complex.Conjugate(smolar[i]);
                 result[k] = v / smolar.Count;
             });
             return result;

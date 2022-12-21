@@ -110,7 +110,7 @@ namespace MultipathSignal.Core
 				case Modulation.MSK:
 					double mf = Math.PI * 0.5 / bitLength;
 					foreach (Complex a in modul.Quadify()) {
-						for (uint i = 0; i < bitLength; i++) {
+						for (uint i = 0; i < 2 * bitLength; i++) {
 							Complex s = Generator.GetNextSample();
 							double mi = Math.Cos(i * mf);
 							double mq = Math.Sin(i * mf);

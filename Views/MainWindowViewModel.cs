@@ -140,8 +140,6 @@ namespace MultipathSignal.Views
 			Plots[3].MinimumY = -max;
 
 			double signalDuration = BitSeqLength / ModulationSpeed;
-			if (ModulationType == SignalModulator.Modulation.MSK) 
-				signalDuration *= 0.5; 
 			OxyPlot.Series.AreaSeries bs1 = new() {
 				Color = OxyColors.SteelBlue
 			};

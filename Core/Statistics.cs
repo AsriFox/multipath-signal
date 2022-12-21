@@ -98,8 +98,8 @@ namespace MultipathSignal.Core
                 this.RaiseStatusChanged("Signal generation is complete. Calculating correlation...");
 
             var correl = useFft
-                ? await CorrelationOverlap.CalculateAsync(dirtySignal, cleanSignal)
-                // ? await CorrelationFft.CalculateAsync(dirtySignal, cleanSignal)
+                // ? await CorrelationOverlap.CalculateAsync(dirtySignal, cleanSignal)
+                ? await CorrelationFft.CalculateAsync(dirtySignal, cleanSignal)
                 : await Correlation.CalculateAsync(dirtySignal, cleanSignal);
             int corrPeakPos = 0;
             double corrPeak = 0.0;
@@ -111,7 +111,8 @@ namespace MultipathSignal.Core
             }
 
             // Calculate the standard deviation:
-            double deviation = correl.Sum(v => (v.Magnitude - corrPeak) * (v.Magnitude - corrPeak)) / correl.Count;
+            double avg = correl.Average(v => v.Magnitude);
+            double deviation = correl.Average(v => (v.Magnitude - avg) * (v.Magnitude - avg));
             // Calculate the criterion:
             deviation = corrPeak / Math.Sqrt(deviation);
 

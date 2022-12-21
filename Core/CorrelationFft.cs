@@ -30,8 +30,8 @@ public static class CorrelationFft
         var correl = new Complex[bigarr.Count - smolar.Count];
         for (int i = 0; i < correl.Length; i++)
             correl[i] = new(
-                corrft[i + smolar.Count].Real / correl.Length,
-                corrft[i + smolar.Count].Imaginary / correl.Length
+                corrft[i].Real / smolar.Count,
+                corrft[i].Imaginary / smolar.Count
             );
         return correl;
     }
