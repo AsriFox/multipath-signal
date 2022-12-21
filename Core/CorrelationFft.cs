@@ -15,15 +15,19 @@ public static class CorrelationFft
         bigarr.CopyTo(bigarr2, 0);
         var smolar2 = new double[bigsize];
         for (int i = 0; i < smolar.Count; i++)
-            smolar2[i] = smolar[smolar.Count - 1 - i];
+            smolar2[i] = smolar[i];
 
         var bigfft = FFT(bigarr2);
         var smolft = FFT(smolar2);
-        var corrft = Enumerable.Zip(bigfft, smolft, (a, b) => a * b).ToArray();
+        var corrft = Enumerable.Zip(
+            bigfft, 
+            smolft, 
+            (a, b) => a * new FftSharp.Complex(b.Real, -b.Imaginary)
+        ).ToArray();
         IFFT(corrft);
         var correl = new double[bigarr.Count - smolar.Count];
         for (int i = 0; i < correl.Length; i++)
-            correl[i] = corrft[i + smolar.Count].Magnitude;
+            correl[i] = corrft[i].Magnitude;
         return correl;
     }
 

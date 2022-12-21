@@ -52,11 +52,13 @@ namespace MultipathSignal.Core
             var actualDelays = new List<double>();
             var tasks2 = new List<Task<double>>();
             for (int i = 0; i < testsRepeatCount; i++) {
-                double delay = delayBase * 2.0 * Utils.RNG.NextDouble();
+                // double delay = delayBase * 2.0 * Utils.RNG.NextDouble();
+                double delay = Utils.RNG.NextDouble() * BitSeqLength / ModulationSpeed;
                 actualDelays.Add(delay);
                 tasks2.Add(this.FindPredictedDelay(delay, snrClean, snrNoisy, useFft));
             }
-            actualDelays.Add(delayBase * 2.0 * Utils.RNG.NextDouble());
+            // actualDelays.Add(delayBase * 2.0 * Utils.RNG.NextDouble());
+            actualDelays.Add(Utils.RNG.NextDouble() * BitSeqLength / ModulationSpeed);
             tasks2.Add(this.FindPredictedDelay(actualDelays.Last(), snrClean, snrNoisy, useFft, true));
 
             var results2 = await Task.WhenAll(tasks2);
@@ -81,10 +83,12 @@ namespace MultipathSignal.Core
 				Method = this.ModulationType,
 				Depth = this.ModulationDepth
             };
-
+            
 			int bitDelay = (int) Math.Ceiling(receiveDelay * gen.BitRate);
+            if (bitDelay > BitSeqLength) throw new ArgumentException();
 			var signal = await gen.ModulateAsync(
-				Utils.RandomBitSeq(bitDelay + 2 * this.BitSeqLength));
+				Utils.RandomBitSeq(3 * this.BitSeqLength)
+            );
 
 			int initDelay = (int)(bitDelay * SignalGenerator.Samplerate / this.ModulationSpeed);
 			var clearSignal = Utils.ApplyNoise(
