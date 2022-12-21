@@ -301,6 +301,16 @@
         <local:PlotView Name="PlotStatistics" 
                         DataContext="{Binding Plots[5]}" />
       </TabItem>
+
+
+      <TabItem FontSize="12" Margin="0" Padding="10, 2" MinHeight="0">
+        <TabItem.Header>
+          <TextBlock Text="OpenGL" />
+        </TabItem.Header>
+        <DockPanel>
+          <local:OpenGlPage />
+        </DockPanel>
+      </TabItem>
     </TabControl>
   </DockPanel>
 </Window>
