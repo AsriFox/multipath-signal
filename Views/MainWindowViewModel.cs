@@ -87,6 +87,7 @@ namespace MultipathSignal.Views
 						await stat.ProcessMultiple(SNRNoisy, TestsRepeatCount, UseFFT);
 						break;
 					case 2:
+						Plots[2].AddDataPoint(new IEnumerable<DataPoint>[] { new List<DataPoint>() });
 						double snr = SNRNoisy;
 						double snrMax = SNRNoisyMax + 0.5 * SNRNoisyStep;
 						while (snr < snrMax) {
