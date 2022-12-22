@@ -41,19 +41,16 @@
       <Button Content="Launch the simulation"
               Command="{Binding Process}"
               Grid.Column="0"
-              IsVisible="{Binding EditMode}"
-              PointerEnter="PointerMoveFocus" />
+              IsVisible="{Binding EditMode}" />
       
       <Button Content="Stop the simulation"
               Command="{Binding StopProcess}"
               Grid.Column="0"
-              IsVisible="{Binding !EditMode}"
-              PointerEnter="PointerMoveFocus" />
+              IsVisible="{Binding !EditMode}" />
       
       <ToggleButton Content="Use FFT"
                     IsChecked="{Binding UseFFT, Mode=TwoWay}"
-                    Grid.Column="1"
-                    PointerEnter="PointerMoveFocus" />
+                    Grid.Column="1" />
       
       <TextBlock Text="{Binding Status, Mode=OneWay}"
                  VerticalAlignment="Center"
@@ -252,6 +249,16 @@
                            Grid.Column="3"
                            Grid.Row="1" />
         </Grid>
+      </Expander>
+
+      <Expander Name="ModellingParams" IsExpanded="True">
+        <Expander.Header>
+          <TextBlock Text="Modelling param-s" />
+        </Expander.Header>
+
+        <UniformGrid Rows="2">
+          <Button Content="Calculate" Click="CalculateFunc3D" />
+        </UniformGrid>
       </Expander>
     </WrapPanel>
 

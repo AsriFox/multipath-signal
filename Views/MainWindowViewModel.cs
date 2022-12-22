@@ -24,7 +24,7 @@ namespace MultipathSignal.Views
 				new PlotViewModel { Title = "Dirty signal: I", MinimumY = -1, MaximumY = 1 },
 				new PlotViewModel { Title = "Dirty signal: Q", MinimumY = -1, MaximumY = 1 },
 				new PlotViewModel { Title = "Correlation", MinimumY = 0.0 },
-				new PlotViewModel(1) { Title = "Statistics", MinimumY = 0.0, MaximumY = 1.0 },
+				new PlotViewModel { Title = "Statistics", MinimumY = 0.0 },
 			};
 			Plots[0].CreateSeries(null, OxyColors.DarkBlue);
 			Plots[1].CreateSeries(null, OxyColors.DarkBlue);
@@ -38,6 +38,7 @@ namespace MultipathSignal.Views
 			};
 			Plots[4].CreateSeries(null, OxyColors.Cyan);
 			Plots[4].CreateSeries(null, OxyColors.Blue);
+			Plots[5].CreateSeries(null, OxyColors.Black);
 			Plots.CollectionChanged += (_, _) => this.RaisePropertyChanged(nameof(Plots));
 		}
 

@@ -1,9 +1,11 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="MultipathSignal.Views.OpenGlPage"
-             xmlns:pages="clr-namespace:MultipathSignal.Views">
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:MultipathSignal.Views"
+        x:Class="MultipathSignal.Views.OpenGlPage"
+        Title="Doppler shift - ambiguity function"
+        Width="783" Height="800" MinWidth="440" MinHeight="420">
   <Grid>
-    <pages:OpenGlPageControl x:Name="GL"/>
+    <local:OpenGlPageControl x:Name="GL"/>
     <StackPanel>
       <TextBlock Text="{Binding #GL.Info}"/>
     </StackPanel>
@@ -26,4 +28,4 @@
       </StackPanel>
     </Grid>
   </Grid>
-</UserControl>
+</Window>
