@@ -9,7 +9,7 @@ namespace MultipathSignal.Core
 	/// <summary>
 	/// Signal generator: complex waveform
 	/// </summary>
-	internal class SignalGenerator
+	public class SignalGenerator
 	{
 		public static double Samplerate { get; set; } = 10;
 
@@ -30,7 +30,7 @@ namespace MultipathSignal.Core
 		}
 	}
 
-	internal class SignalModulator
+	public class SignalModulator
 	{
 		public enum Modulation { 
 			/// <summary>

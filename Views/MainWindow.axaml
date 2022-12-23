@@ -162,7 +162,7 @@
           <TextBlock Text="Simulation param-s" />
         </Expander.Header>
 
-        <Grid ColumnDefinitions="*,*,*,*" RowDefinitions="*,*">
+        <Grid ColumnDefinitions="*,*,*,*,*" RowDefinitions="*,*">
           <local:NumberBox Header="Receive delay, s"
                            Format="{}{0:F4}"
                            Step="0.001"
@@ -248,17 +248,20 @@
                            PointerEnter="PointerMoveFocus"
                            Grid.Column="3"
                            Grid.Row="1" />
+          
+          <Button Command="{Binding CalculateFunc3D}" 
+                  VerticalAlignment="Top"
+                  Width="96"
+                  IsVisible="{Binding #SimVariantFull.IsSelected}"
+                  Grid.Column="4"
+                  Grid.RowSpan="2">
+                  
+            <TextBlock Text="Calculate ambiguity function"
+                       TextWrapping="Wrap"
+                       TextAlignment="Center"
+                       Margin="8" />
+          </Button>
         </Grid>
-      </Expander>
-
-      <Expander Name="ModellingParams" IsExpanded="True">
-        <Expander.Header>
-          <TextBlock Text="Modelling param-s" />
-        </Expander.Header>
-
-        <UniformGrid Rows="2">
-          <Button Content="Calculate" Click="CalculateFunc3D" />
-        </UniformGrid>
       </Expander>
     </WrapPanel>
 
@@ -307,16 +310,6 @@
         </TabItem.Header>
         <local:PlotView Name="PlotStatistics" 
                         DataContext="{Binding Plots[5]}" />
-      </TabItem>
-
-
-      <TabItem FontSize="12" Margin="0" Padding="10, 2" MinHeight="0">
-        <TabItem.Header>
-          <TextBlock Text="OpenGL" />
-        </TabItem.Header>
-        <DockPanel>
-          <local:OpenGlPage />
-        </DockPanel>
       </TabItem>
     </TabControl>
   </DockPanel>

@@ -8,23 +8,18 @@
     <local:OpenGlPageControl x:Name="GL"/>
     <StackPanel>
       <TextBlock Text="{Binding #GL.Info}"/>
+      <TextBlock x:Name="FlavorTextBlock" FontSize="20" />
     </StackPanel>
     <Grid ColumnDefinitions="*,Auto" Margin="20">
       <StackPanel Grid.Column="1" MinWidth="300">
-        <TextBlock>Yaw</TextBlock>
+        <TextBlock Text="Yaw" />
         <Slider Value="{Binding Yaw, Mode=TwoWay, ElementName=GL}" Maximum="10"/>
-        <TextBlock>Pitch</TextBlock>
+        <TextBlock Text="Pitch" />
         <Slider Value="{Binding Pitch, Mode=TwoWay, ElementName=GL}" Maximum="10"/>
-        <TextBlock>Roll</TextBlock>
+        <TextBlock Text="Roll" />
         <Slider Value="{Binding Roll, Mode=TwoWay, ElementName=GL}" Maximum="10"/>
-        <StackPanel Orientation="Horizontal">
-          <TextBlock FontWeight="Bold" Foreground="#C000C0">D</TextBlock>
-          <TextBlock FontWeight="Bold" Foreground="#00C090">I</TextBlock>
-          <TextBlock FontWeight="Bold" Foreground="#90C000">S</TextBlock>
-          <TextBlock FontWeight="Bold" Foreground="#C09000">C</TextBlock>
-          <TextBlock FontWeight="Bold" Foreground="#00C090">O</TextBlock>
-        </StackPanel>
-        <Slider Value="{Binding Disco, Mode=TwoWay, ElementName=GL}" Maximum="1"/>
+        <TextBlock Text="Distance" />
+        <Slider Value="{Binding Distance, Mode=TwoWay, ElementName=GL}" Minimum="1" Maximum="10"/>
       </StackPanel>
     </Grid>
   </Grid>

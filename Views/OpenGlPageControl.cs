@@ -15,7 +15,7 @@ public class OpenGlPageControl : OpenGlControlBase
     private float _yaw;
 
     public static readonly DirectProperty<OpenGlPageControl, float> YawProperty =
-        AvaloniaProperty.RegisterDirect<OpenGlPageControl, float>("Yaw", o => o.Yaw, (o, v) => o.Yaw = v);
+        AvaloniaProperty.RegisterDirect<OpenGlPageControl, float>(nameof(Yaw), o => o.Yaw, (o, v) => o.Yaw = v);
 
     public float Yaw
     {
@@ -23,10 +23,10 @@ public class OpenGlPageControl : OpenGlControlBase
         set => SetAndRaise(YawProperty, ref _yaw, value);
     }
 
-    private float _pitch;
+    private float _pitch = 5.0f;
 
     public static readonly DirectProperty<OpenGlPageControl, float> PitchProperty =
-        AvaloniaProperty.RegisterDirect<OpenGlPageControl, float>("Pitch", o => o.Pitch, (o, v) => o.Pitch = v);
+        AvaloniaProperty.RegisterDirect<OpenGlPageControl, float>(nameof(Pitch), o => o.Pitch, (o, v) => o.Pitch = v);
 
     public float Pitch
     {
@@ -38,7 +38,7 @@ public class OpenGlPageControl : OpenGlControlBase
     private float _roll;
 
     public static readonly DirectProperty<OpenGlPageControl, float> RollProperty =
-        AvaloniaProperty.RegisterDirect<OpenGlPageControl, float>("Roll", o => o.Roll, (o, v) => o.Roll = v);
+        AvaloniaProperty.RegisterDirect<OpenGlPageControl, float>(nameof(Roll), o => o.Roll, (o, v) => o.Roll = v);
 
     public float Roll
     {
@@ -47,21 +47,21 @@ public class OpenGlPageControl : OpenGlControlBase
     }
 
 
-    private float _disco;
+    private float _distance = 2.0f;
 
-    public static readonly DirectProperty<OpenGlPageControl, float> DiscoProperty =
-        AvaloniaProperty.RegisterDirect<OpenGlPageControl, float>("Disco", o => o.Disco, (o, v) => o.Disco = v);
+    public static readonly DirectProperty<OpenGlPageControl, float> DistanceProperty =
+        AvaloniaProperty.RegisterDirect<OpenGlPageControl, float>(nameof(Distance), o => o.Distance, (o, v) => o.Distance = v);
 
-    public float Disco
+    public float Distance
     {
-        get => _disco;
-        set => SetAndRaise(DiscoProperty, ref _disco, value);
+        get => _distance;
+        set => SetAndRaise(DistanceProperty, ref _distance, value);
     }
 
     private string _info = string.Empty;
 
     public static readonly DirectProperty<OpenGlPageControl, string> InfoProperty =
-        AvaloniaProperty.RegisterDirect<OpenGlPageControl, string>("Info", o => o.Info, (o, v) => o.Info = v);
+        AvaloniaProperty.RegisterDirect<OpenGlPageControl, string>(nameof(Info), o => o.Info, (o, v) => o.Info = v);
 
     public string Info
     {
@@ -71,7 +71,7 @@ public class OpenGlPageControl : OpenGlControlBase
 
     static OpenGlPageControl()
     {
-        AffectsRender<OpenGlPageControl>(YawProperty, PitchProperty, RollProperty, DiscoProperty);
+        AffectsRender<OpenGlPageControl>(YawProperty, PitchProperty, RollProperty, DistanceProperty);
     }
 
     private int _vertexShader;
@@ -118,20 +118,9 @@ public class OpenGlPageControl : OpenGlControlBase
     varying vec3 FragPos;
     varying vec3 VecPos;  
     varying vec3 Normal;
-    uniform float uTime;
-    uniform float uDisco;
     void main()
     {
-        float discoScale = sin(uTime * 10.0) / 10.0;
-        float distortionX = 1.0 + uDisco * cos(uTime * 20.0) / 10.0;
-        
-        float scale = 1.0 + uDisco * discoScale;
-        
-        vec3 scaledPos = aPos;
-        scaledPos.x = scaledPos.x * distortionX;
-        
-        scaledPos *= scale;
-        gl_Position = uProjection * uView * uModel * vec4(scaledPos, 1.0);
+        gl_Position = uProjection * uView * uModel * vec4(aPos, 1.0);
         FragPos = vec3(uModel * vec4(aPos, 1.0));
         VecPos = aPos;
         Normal = normalize(vec3(uModel * vec4(aNormal, 1.0)));
@@ -142,31 +131,19 @@ public class OpenGlPageControl : OpenGlControlBase
     varying vec3 FragPos; 
     varying vec3 VecPos; 
     varying vec3 Normal;
-    uniform float uMaxY;
-    uniform float uMinY;
-    uniform float uTime;
-    uniform float uDisco;
+    uniform float uMaxZ;
+    uniform float uMinZ;
     //DECLAREGLFRAG
 
     void main()
     {
-        float y = (VecPos.y - uMinY) / (uMaxY - uMinY);
-        float c = cos(atan(VecPos.x, VecPos.z) * 20.0 + uTime * 40.0 + y * 50.0);
-        float s = sin(-atan(VecPos.z, VecPos.x) * 20.0 - uTime * 20.0 - y * 30.0);
-
-        vec3 discoColor = vec3(
-            0.5 + abs(0.5 - y) * cos(uTime * 10.0),
-            0.25 + (smoothstep(0.3, 0.8, y) * (0.5 - c / 4.0)),
-            0.25 + abs((smoothstep(0.1, 0.4, y) * (0.5 - s / 4.0))));
-
-        vec3 objectColor = vec3((1.0 - y), 0.40 +  y / 4.0, y * 0.75 + 0.25);
-        objectColor = objectColor * (1.0 - uDisco) + discoColor * uDisco;
+        float z = (VecPos.z - uMinZ) / (uMaxZ - uMinZ);
+        vec3 objectColor = vec3((1.0 - z), 0.40 +  z / 4.0, z * 0.75 + 0.25);
 
         float ambientStrength = 0.3;
         vec3 lightColor = vec3(1.0, 1.0, 1.0);
-        vec3 lightPos = vec3(uMaxY * 2.0, uMaxY * 2.0, uMaxY * 2.0);
+        vec3 lightPos = vec3(uMaxZ * 2.0, uMaxZ * 2.0, uMaxZ * 2.0);
         vec3 ambient = ambientStrength * lightColor;
-
 
         vec3 norm = normalize(Normal);
         vec3 lightDir = normalize(lightPos - FragPos);  
@@ -176,7 +153,6 @@ public class OpenGlPageControl : OpenGlControlBase
 
         vec3 result = (ambient + diffuse) * objectColor;
         gl_FragColor = vec4(result, 1.0);
-
     }
 ");
 
@@ -189,8 +165,8 @@ public class OpenGlPageControl : OpenGlControlBase
 
     private Vertex[] _points = Array.Empty<Vertex>();
     private ushort[] _indices = Array.Empty<ushort>();
-    private float _minY;
-    private float _maxY;
+    private float _minZ;
+    private float _maxZ;
 
 
     public OpenGlPageControl()
@@ -200,27 +176,6 @@ public class OpenGlPageControl : OpenGlControlBase
 
     public void Init(object? sender, EventArgs e)
     {
-        // var name = typeof(OpenGlPage).Assembly.GetManifestResourceNames().First(x => x.Contains("teapot.bin"));
-        // using (var sr = new BinaryReader(typeof(OpenGlPage).Assembly.GetManifestResourceStream(name)))
-        // {
-        //     var buf = new byte[sr.ReadInt32()];
-        //     sr.Read(buf, 0, buf.Length);
-        //     var points = new float[buf.Length / 4];
-        //     Buffer.BlockCopy(buf, 0, points, 0, buf.Length);
-        //     buf = new byte[sr.ReadInt32()];
-        //     sr.Read(buf, 0, buf.Length);
-        //     _indices = new ushort[buf.Length / 2];
-        //     Buffer.BlockCopy(buf, 0, _indices, 0, buf.Length);
-        //     _points = new Vertex[points.Length / 3];
-        //     for (var primitive = 0; primitive < points.Length / 3; primitive++)
-        //     {
-        //         var srci = primitive * 3;
-        //         _points[primitive] = new Vertex
-        //         {
-        //             Position = new Vector3(points[srci], points[srci + 1], points[srci + 2])
-        //         };
-        //     }
-        // }
         if (this.Parent?.Parent is not OpenGlPage page) {
             throw new NullReferenceException();
         }
@@ -247,8 +202,8 @@ public class OpenGlPageControl : OpenGlControlBase
         for (int i = 0; i < _points.Length; i++)
         {
             _points[i].Normal = Vector3.Normalize(_points[i].Normal);
-            _maxY = Math.Max(_maxY, _points[i].Position.Y);
-            _minY = Math.Min(_minY, _points[i].Position.Y);
+            _maxZ = Math.Max(_maxZ, _points[i].Position.Z);
+            _minZ = Math.Min(_minZ, _points[i].Position.Z);
         }
     }
 
@@ -350,27 +305,27 @@ public class OpenGlPageControl : OpenGlControlBase
                 0.01f, 1000);
 
 
-        var view = Matrix4x4.CreateLookAt(new Vector3(25, 25, 25), new Vector3(), new Vector3(0, -1, 0));
+        var view = Matrix4x4.CreateLookAt(
+            new Vector3(Distance, Distance, Distance), 
+            new Vector3(), 
+            new Vector3(0, -1, 0)
+        );
         var model = Matrix4x4.CreateFromYawPitchRoll(_yaw, _pitch, _roll);
         var modelLoc = GL.GetUniformLocationString(_shaderProgram, "uModel");
         var viewLoc = GL.GetUniformLocationString(_shaderProgram, "uView");
         var projectionLoc = GL.GetUniformLocationString(_shaderProgram, "uProjection");
-        var maxYLoc = GL.GetUniformLocationString(_shaderProgram, "uMaxY");
-        var minYLoc = GL.GetUniformLocationString(_shaderProgram, "uMinY");
-        var timeLoc = GL.GetUniformLocationString(_shaderProgram, "uTime");
-        var discoLoc = GL.GetUniformLocationString(_shaderProgram, "uDisco");
+        var maxZLoc = GL.GetUniformLocationString(_shaderProgram, "uMaxZ");
+        var minZLoc = GL.GetUniformLocationString(_shaderProgram, "uMinZ");
         GL.UniformMatrix4fv(modelLoc, 1, false, &model);
         GL.UniformMatrix4fv(viewLoc, 1, false, &view);
         GL.UniformMatrix4fv(projectionLoc, 1, false, &projection);
-        GL.Uniform1f(maxYLoc, _maxY);
-        GL.Uniform1f(minYLoc, _minY);
-        GL.Uniform1f(timeLoc, (float)St.Elapsed.TotalSeconds);
-        GL.Uniform1f(discoLoc, _disco);
+        GL.Uniform1f(maxZLoc, _maxZ);
+        GL.Uniform1f(minZLoc, _minZ);
         CheckError(GL);
         GL.DrawElements(GL_TRIANGLES, _indices.Length, GL_UNSIGNED_SHORT, IntPtr.Zero);
 
         CheckError(GL);
-        if (_disco > 0.01)
+        if (_distance > 0.01)
             Dispatcher.UIThread.Post(InvalidateVisual, DispatcherPriority.Background);
     }
 

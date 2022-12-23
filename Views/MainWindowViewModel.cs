@@ -174,6 +174,37 @@ namespace MultipathSignal.Views
 			Status = $"Procedure was completed. Predicted delay: {delay:F4}s; ";
 		}
 
+		public async void CalculateFunc3D()
+		{
+			SignalGenerator.Samplerate = Samplerate;
+			var gen = new SignalModulator() {
+				MainFrequency = MainFrequency,
+				BitRate = ModulationSpeed,
+				Method = ModulationType,
+				Depth = ModulationDepth
+			};
+
+			int M = 100;
+			var samplesTime = Enumerable.Range(0, M)
+				.Select(i => BitSeqLength * 2 * gen.BitLength * i / (M - 1))
+				.ToArray();
+
+			int N = (int)(DopplerShiftMax / DopplerShiftStep);
+			var samplesDoppler = Enumerable.Range(0, N)
+				.Select(j => DopplerShiftMax * j / (N - 1))
+				.ToArray();
+
+			await Task.Factory.StartNew(
+				() => OpenGlPage.CreateAmbiguityFuncPage(
+					gen,			BitSeqLength, 
+					ReceiveDelay,	DopplerShift,
+					samplesTime, 	samplesDoppler,
+					SNRClean,		SNRNoisy
+				)
+			);
+			// await Task.Factory.StartNew(() => OpenGlPage.CreateTeapot());
+		}
+
 		#region Modulation parameters
 
 		private SignalModulator.Modulation modulationType = SignalModulator.Modulation.AM;
