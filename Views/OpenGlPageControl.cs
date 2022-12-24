@@ -131,18 +131,28 @@ public class OpenGlPageControl : OpenGlControlBase
     varying vec3 FragPos; 
     varying vec3 VecPos; 
     varying vec3 Normal;
-    uniform float uMaxZ;
+    uniform float uMinX;
+    uniform float uMaxX;
+    uniform float uMinY;
+    uniform float uMaxY;
     uniform float uMinZ;
+    uniform float uMaxZ;
     //DECLAREGLFRAG
 
     void main()
     {
-        float z = (VecPos.z - uMinZ) / (uMaxZ - uMinZ);
-        vec3 objectColor = vec3((1.0 - z), 0.40 +  z / 4.0, z * 0.75 + 0.25);
+        float x = (VecPos.x - uMinX) / (uMaxX - uMinX);
+        float y = (VecPos.y - uMinY) / (uMaxY - uMinY);
+                
+        float r = clamp((2.0 - x) * (1.0 - y),  0.0, 1.0);
+        float g = clamp(x * (1.0 + y),          0.0, 1.0);
+        float b = clamp(2.0 * (y - x),          0.0, 1.0);
+        
+        vec3 objectColor = vec3(r, g, b);
 
         float ambientStrength = 0.3;
         vec3 lightColor = vec3(1.0, 1.0, 1.0);
-        vec3 lightPos = vec3(uMaxZ * 2.0, uMaxZ * 2.0, uMaxZ * 2.0);
+        vec3 lightPos = vec3(uMaxX * 2.0, uMaxY * 2.0, uMaxZ * 2.0);
         vec3 ambient = ambientStrength * lightColor;
 
         vec3 norm = normalize(Normal);
@@ -165,8 +175,12 @@ public class OpenGlPageControl : OpenGlControlBase
 
     private Vertex[] _points = Array.Empty<Vertex>();
     private ushort[] _indices = Array.Empty<ushort>();
-    private float _minZ;
+    private float _maxX;
+    private float _minX;
+    private float _maxY;
+    private float _minY;
     private float _maxZ;
+    private float _minZ;
 
 
     public OpenGlPageControl()
@@ -202,6 +216,10 @@ public class OpenGlPageControl : OpenGlControlBase
         for (int i = 0; i < _points.Length; i++)
         {
             _points[i].Normal = Vector3.Normalize(_points[i].Normal);
+            _maxX = Math.Max(_maxX, _points[i].Position.X);
+            _minX = Math.Min(_minX, _points[i].Position.X);
+            _maxY = Math.Max(_maxY, _points[i].Position.Y);
+            _minY = Math.Min(_minY, _points[i].Position.Y);
             _maxZ = Math.Max(_maxZ, _points[i].Position.Z);
             _minZ = Math.Min(_minZ, _points[i].Position.Z);
         }
@@ -314,13 +332,21 @@ public class OpenGlPageControl : OpenGlControlBase
         var modelLoc = GL.GetUniformLocationString(_shaderProgram, "uModel");
         var viewLoc = GL.GetUniformLocationString(_shaderProgram, "uView");
         var projectionLoc = GL.GetUniformLocationString(_shaderProgram, "uProjection");
-        var maxZLoc = GL.GetUniformLocationString(_shaderProgram, "uMaxZ");
+        var minXLoc = GL.GetUniformLocationString(_shaderProgram, "uMinX");
+        var maxXLoc = GL.GetUniformLocationString(_shaderProgram, "uMaxX");
+        var minYLoc = GL.GetUniformLocationString(_shaderProgram, "uMinY");
+        var maxYLoc = GL.GetUniformLocationString(_shaderProgram, "uMaxY");
         var minZLoc = GL.GetUniformLocationString(_shaderProgram, "uMinZ");
+        var maxZLoc = GL.GetUniformLocationString(_shaderProgram, "uMaxZ");
         GL.UniformMatrix4fv(modelLoc, 1, false, &model);
         GL.UniformMatrix4fv(viewLoc, 1, false, &view);
         GL.UniformMatrix4fv(projectionLoc, 1, false, &projection);
-        GL.Uniform1f(maxZLoc, _maxZ);
+        GL.Uniform1f(minXLoc, _minX);
+        GL.Uniform1f(maxXLoc, _maxX);
+        GL.Uniform1f(minYLoc, _minY);
+        GL.Uniform1f(maxYLoc, _maxY);
         GL.Uniform1f(minZLoc, _minZ);
+        GL.Uniform1f(maxZLoc, _maxZ);
         CheckError(GL);
         GL.DrawElements(GL_TRIANGLES, _indices.Length, GL_UNSIGNED_SHORT, IntPtr.Zero);
 
