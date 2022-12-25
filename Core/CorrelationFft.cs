@@ -30,17 +30,5 @@ namespace MultipathSignal.Core
                 .Select(c => new Complex(c.Real, c.Imaginary))
                 .ToArray();
         }
-
-        public static Task<IList<Complex>> CalculateAsync(IList<Complex> bigarr, IList<Complex> smolar) =>
-            Task.Factory.StartNew(
-                args => {
-                    if (args is not Tuple<IList<Complex>, IList<Complex>> arrs)
-                        throw new ArgumentException($"Expected a pair of arrays, got {args?.GetType()}", nameof(args));
-                    return Calculate(arrs.Item1, arrs.Item2);
-                },
-                Tuple.Create(bigarr, smolar),
-                Utils.Cancellation.Token,
-                TaskCreationOptions.None,
-                TaskScheduler.Default);
     }
 }

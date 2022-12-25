@@ -40,23 +40,11 @@ namespace MultipathSignal.Core
                     int k = j + i;
                     if (i >= q) k -= smolsize;
                     if (k < 0) k += bigarr.Count;
-                    if (k > bigarr.Count) k -= bigarr.Count;
+                    if (k >= bigarr.Count) k -= bigarr.Count;
                     correl[k] += new Complex(bigarr2[i].Real, bigarr2[i].Imaginary);
                 }
             }
             return correl;
         }
-
-        public static Task<IList<Complex>> CalculateAsync(IList<Complex> bigarr, IList<Complex> smolar) =>
-            Task.Factory.StartNew(
-                args => {
-                    if (args is not Tuple<IList<Complex>, IList<Complex>> arrs)
-                        throw new ArgumentException($"Expected a pair of arrays, got {args?.GetType()}", nameof(args));
-                    return Calculate(arrs.Item1, arrs.Item2);
-                },
-                Tuple.Create(bigarr, smolar),
-                Utils.Cancellation.Token,
-                TaskCreationOptions.None,
-                TaskScheduler.Default);
     }
 }
