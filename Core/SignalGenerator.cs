@@ -16,48 +16,48 @@ namespace MultipathSignal.Core
 
 		public static double BitLength => Samplerate / BitRate;
 
-		public static IList<bool> Construct(IList<bool> modul, string[] goldSeq)
+		public static IEnumerable<bool> Construct(IEnumerable<bool> modul, string[] goldSeq)
 		{
-			List<bool> result = new();
-			for (int k = 0; k + 1 < modul.Count; k += 2) {
-				int bb = modul[k] ? (modul[k + 1] ? 3 : 2) : (modul[k + 1] ? 1 : 0);
-				result.AddRange(goldSeq[bb].Select(c => c == '1'));
-				result.Add(false);	// even bit count
+			using (var iterator = modul.GetEnumerator()) {
+				while (iterator.MoveNext()) {
+					int bb = iterator.Current ? 2 : 0;
+					if (iterator.MoveNext() && iterator.Current) bb++;
+					foreach (char c in goldSeq[bb])
+						yield return c == '1';
+					yield return false;	// even bit count
+				}
 			}
-			if (modul.Count % 2 > 0){
-				result.AddRange(goldSeq[modul[^1] ? 2 : 0].Select(c => c == '1'));
-				result.Add(false);	// even bit count
-			}
-			return result;
 		}
 
-		public static IList<Complex> Modulate(IList<bool> modul)
+		public static IEnumerable<Complex> Modulate(IEnumerable<bool> modul)
 		{
-			List<Complex> result = new();
-			void modulate(bool bi, bool bq) {
-				double ai = bi ? 1.0 : -1.0;
-				double aq = bq ? 1.0 : -1.0;
-				for (int i = 0; i < BitLength; i++) 
-					result.Add(new(ai, aq));
+			double am = Math.Sqrt(0.5);
+			using (var iterator = modul.GetEnumerator()) {
+				while (iterator.MoveNext()) {
+					bool i = iterator.Current;
+					bool q = iterator.MoveNext() && iterator.Current;
+					for (int t = 0; t < BitLength; t++) {
+						yield return new Complex(
+							i ? am : -am,
+							q ? am : -am
+						);
+					}
+				}
 			}
-
-			for (int j = 0; j + 1 < modul.Count; j += 2)
-				modulate(modul[j], modul[j + 1]);
-			if (modul.Count % 2 > 0)
-				modulate(modul[^1], false);
-			return result;
 		}
 
 		/// <summary>
 		/// Modulate a bit sequence asynchronously.
 		/// Uses the default cancellation token.
 		/// </summary>
-		public static Task<IList<Complex>> ModulateGoldAsync(IList<bool> modul, string[] goldSeq) =>
+		public static Task<IList<Complex>> ModulateGoldAsync(IEnumerable<bool> modul, string[] goldSeq) =>
 			Task.Factory.StartNew(
 				args => {
-					if (args is not Tuple<IList<bool>, string[]> @aargs) 
+					if (args is not Tuple<IEnumerable<bool>, string[]> @aargs) 
 						return Array.Empty<Complex>();
-					return Modulate(Construct(aargs.Item1, aargs.Item2));
+					return Modulate(
+						Construct(aargs.Item1, aargs.Item2)
+					).ToArray() as IList<Complex>;
 				}, 
 				Tuple.Create(modul, goldSeq),
 				Utils.Cancellation.Token, 

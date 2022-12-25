@@ -80,7 +80,8 @@ namespace MultipathSignal.Views
 				switch (SimulationMode) {
 					case 0:     // Single test
 						Status = "Processing one signal...";
-						await stat.EncodeDecode(SNRNoisy, UseFFT, true);
+						double ber1 = await stat.EncodeDecode(SNRNoisy, UseFFT, true);
+						Status += $"Simulation completed. BER: {ber1}";
 						break;
 					case 1:
 						Status = "Processing multiple signals...";
@@ -95,7 +96,6 @@ namespace MultipathSignal.Views
 							Status = $"Processing signals with SNR = {snr} db...";
 							double ber = await stat.ProcessMultiple(snr, TestsRepeatCount, UseFFT);
 							Plots[2].AppendTo(0, new DataPoint(snr, ber));
-							Status = $"BER: {ber}";
 							SNRShown = snr;
 							snr += SNRNoisyStep;
 						}
@@ -126,20 +126,15 @@ namespace MultipathSignal.Views
 
 		public void OnPlotDataReady(params IList<double>[] values)
 		{
-			Dispatcher.UIThread.InvokeAsync(
-				() => {
-					Status = "Data generated. Plotting...";
-					Plots[0].AddDataPoint(
-						values[4].Plotify(),
-						values[5].Plotify()
-					);
-					Plots[1].AddDataPoint(
-						values[0].Plotify(),
-						values[1].Plotify(),
-						values[2].Plotify(),
-						values[3].Plotify()
-					);
-				}
+			Plots[0].AddDataPoint(
+				values[4].Plotify(),
+				values[5].Plotify()
+			);
+			Plots[1].AddDataPoint(
+				values[0].Plotify(),
+				values[1].Plotify(),
+				values[2].Plotify(),
+				values[3].Plotify()
 			);
 		}
 

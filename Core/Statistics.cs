@@ -38,14 +38,16 @@ namespace MultipathSignal.Core
 			
 			var filters = GoldSeq.Select(
 				seq => SignalModulator.Modulate(
-					seq.Select(c => c == '1').ToArray()
-				)
+					seq
+					.Select(c => c == '1')
+					.ToArray()
+				).ToArray()
 			).ToArray();
 
 			var noisySignal = Utils.ApplyNoise(signal, Math.Pow(10.0, 0.1 * snr));
 			if (output)
 				StatusChanged?.Invoke("Signal generation complete. Calculating correlation...");
-
+			
 			var correl = useFft
 				? filters.Select(
 					f => CorrelationOverlap.Calculate(noisySignal, f)
@@ -73,7 +75,7 @@ namespace MultipathSignal.Core
 			}
 
 			int length = signal.Count;
-			int bitLength = (int)SignalModulator.BitLength * 16;
+			int bitLength = (int)Math.Ceiling(SignalModulator.BitLength) * 16;
 			List<bool> result = new();
 			for (int t = bitLength / 2; t < length; t += bitLength) {
 				var max = new double[4];
@@ -97,11 +99,7 @@ namespace MultipathSignal.Core
 			for (int i = 0; i < message.Length; i++)
 				if (message[i] != result[i])
 					errc++;
-			double ber = (double)errc / message.Length;
-
-			if (output)
-				StatusChanged?.Invoke($"Simulation completed. BER: {ber}");
-			return ber;
+			return (double)errc / message.Length;
 		}
 	}
 }
