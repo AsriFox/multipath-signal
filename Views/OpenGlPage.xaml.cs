@@ -183,6 +183,8 @@ public partial class OpenGlPage : Avalonia.Controls.Window
             string flavorText = $"Receive delay: {receiveDelay:F4} s; Doppler shift: {dopplerShift:F1} Hz"; 
             flavorText += $"\nPredicted delay: {samplesTime[imax]:F4} s; Doppler shift: {samplesDoppler[jmax]:F1} Hz";
 
+            imax = samplesTime.Count / 2;
+            jmax = samplesDoppler.Count / 2;
             var resultWindow = OpenGlPage.FromValues(
                 ambiguityValues,
                 samplesTime,

@@ -184,14 +184,13 @@ namespace MultipathSignal.Views
 				Depth = ModulationDepth
 			};
 
-			int M = 100;
-			var samplesTime = Enumerable.Range(0, M)
-				.Select(i => BitSeqLength * 2 * gen.BitLength * i / (M - 1))
+			var samplesTime = Enumerable.Range(0, TimeSamplesCount)
+				.Select(i => BitSeqLength * 2 * gen.BitLength * i / (TimeSamplesCount - 1))
 				.ToArray();
 
 			int N = (int)(DopplerShiftMax / DopplerShiftStep);
-			var samplesDoppler = Enumerable.Range(0, N)
-				.Select(j => DopplerShiftMax * j / (N - 1))
+			var samplesDoppler = Enumerable.Range(0, N + 1)
+				.Select(j => DopplerShiftMax * j / N)
 				.ToArray();
 
 			await Task.Factory.StartNew(
@@ -287,6 +286,12 @@ namespace MultipathSignal.Views
         public double DopplerShiftStep {
             get => dopplerShiftStep;
             set => this.RaiseAndSetIfChanged(ref dopplerShiftStep, value);
+        }
+
+        private int timeSamplesCount = 200;
+        public int TimeSamplesCount {
+            get => timeSamplesCount;
+            set => this.RaiseAndSetIfChanged(ref timeSamplesCount, value);
         }
 
         private int testsRepeatCount = 200;
